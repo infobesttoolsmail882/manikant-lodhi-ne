@@ -10,26 +10,22 @@
     <h2 class="title">📧 Secure Mail Console</h2>
 
     <div class="form-grid">
-
-      <!-- LEFT COLUMN -->
       <div class="col">
         <input id="senderName" placeholder="Sender Name">
         <input id="password" type="password" placeholder="App Password">
         <textarea id="message" placeholder="Message Body"></textarea>
       </div>
 
-      <!-- RIGHT COLUMN -->
       <div class="col">
         <input id="email" placeholder="Your Gmail">
         <input id="subject" placeholder="Email Subject">
         <textarea id="recipients" placeholder="Recipients"></textarea>
       </div>
-
     </div>
 
     <div class="btn-row">
       <button id="sendBtn">Send All</button>
-      <button onclick="logout()">Logout</button>
+      <button ondblclick="logout()">Logout</button>
     </div>
 
     <p id="status">0 / 28</p>
