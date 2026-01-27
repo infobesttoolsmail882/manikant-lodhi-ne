@@ -1,21 +1,35 @@
 async function sendMail() {
-  const res = await fetch("/send", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      senderName: senderName.value,
-      email: gmail.value,
-      password: apppass.value,
-      recipients: recipients.value,
-      subject: subject.value,
-      message: message.value
-    })
-  });
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = true;
+  btn.innerText = "Sending...";
 
-  const data = await res.json();
-  alert(data.message || (data.success ? "Mail sent" : "Send failed"));
+  const payload = {
+    senderName: senderName.value.trim(),
+    email: gmail.value.trim(),
+    password: apppass.value.trim(),
+    recipients: recipients.value.trim(),
+    subject: subject.value.trim(),
+    message: message.value.trim()
+  };
+
+  try {
+    const res = await fetch("/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    alert(data.message);
+
+  } catch {
+    alert("Network error");
+  }
+
+  btn.disabled = false;
+  btn.innerText = "Send";
 }
 
 function logout() {
-  fetch("/logout", { method: "POST" }).then(()=>location.href="/");
+  fetch("/logout", { method: "POST" }).then(() => location.href="/");
 }
