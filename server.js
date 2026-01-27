@@ -6,11 +6,11 @@ const path = require("path");
 const app = express();
 const PORT = 8080;
 
-// 🔐 PANEL LOGIN
-const PANEL_USER = "admin";
-const PANEL_PASS = "admin123";
+// 🔐 PANEL LOGIN (as requested)
+const PANEL_USER = "mailinbox@#";
+const PANEL_PASS = "mailinbox@#";
 
-// 📧 SMTP CONFIG (use Gmail App Password)
+// 📧 SMTP (Use your real Gmail + App Password)
 const SMTP_USER = "yourgmail@gmail.com";
 const SMTP_PASS = "yourapppassword";
 
@@ -29,8 +29,6 @@ function requireAuth(req, res, next) {
   res.redirect("/");
 }
 
-// ================= ROUTES =================
-
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
@@ -44,7 +42,7 @@ app.post("/login", (req, res) => {
   res.json({ success: false });
 });
 
-app.get("/panel", requireAuth, (req, res) =>
+app.get("/launcher", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
 );
 
@@ -52,8 +50,7 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ================= MAIL SETUP =================
-
+// Mail transporter
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -61,11 +58,9 @@ const transporter = nodemailer.createTransport({
   auth: { user: SMTP_USER, pass: SMTP_PASS }
 });
 
-// ================= SEND MAIL (1-to-1 SAFE USE) =================
-
 app.post("/send", requireAuth, async (req, res) => {
   try {
-    const { to, subject, message, senderName } = req.body;
+    const { senderName, to, subject, message } = req.body;
 
     if (!to || !subject || !message) {
       return res.json({ success: false, message: "Missing fields" });
@@ -87,8 +82,6 @@ app.post("/send", requireAuth, async (req, res) => {
     res.json({ success: false, message: "Send failed" });
   }
 });
-
-// ================= START =================
 
 app.listen(PORT, () =>
   console.log("Secure mail panel running on port", PORT)
