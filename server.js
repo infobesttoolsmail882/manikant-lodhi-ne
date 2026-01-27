@@ -14,6 +14,7 @@ const HARD_USERNAME = "mailinbox@#";
 const HARD_PASSWORD = "mailinbox@#";
 
 let mailLimits = {};
+let transportCache = {}; // 🔥 Reuse SMTP connections
 const sessionStore = new session.MemoryStore();
 
 app.use(helmet());
@@ -59,35 +60,18 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* ---------- SMART SAFE DELIVERY ENGINE ---------- */
-
-async function sendWithBackoff(transporter, mail) {
-  let attempt = 0;
-  let wait = 400;
-
-  while (attempt < 2) {
-    try {
-      await transporter.sendMail(mail);
-      return;
-    } catch (err) {
-      attempt++;
-      await delay(wait);
-      wait *= 1.7; // gentle backoff
-    }
-  }
-}
-
+// 🚀 SAFE PARALLEL BATCH (optimized timing)
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
+    await Promise.allSettled(batch.map(mail => transporter.sendMail(mail)));
 
-    await Promise.all(batch.map(mail => sendWithBackoff(transporter, mail)));
-
-    await delay(280); // stable, provider-friendly pace
+    // delay only if more mails remain
+    if (i + 5 < mails.length) {
+      await delay(260); // slightly optimized but still safe
+    }
   }
 }
-
-/* ------------------------------------------------ */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -106,6 +90,23 @@ function cleanBody(message) {
 
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+
+function getTransporter(email, password) {
+  if (transportCache[email]) return transportCache[email];
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    pool: true,
+    maxConnections: 1,
+    maxMessages: Infinity,
+    auth: { user: email, pass: password }
+  });
+
+  transportCache[email] = transporter;
+  return transporter;
 }
 
 app.post("/send", requireAuth, async (req, res) => {
@@ -128,18 +129,7 @@ app.post("/send", requireAuth, async (req, res) => {
       return res.json({ success: false, message: `Limit Full ❌ (${mailLimits[email].count}/27)` });
     }
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      pool: true,
-      maxConnections: 1,
-      maxMessages: Infinity,
-      auth: { user: email, pass: password }
-    });
-
-    try { await transporter.verify(); }
-    catch { return res.json({ success: false, message: "App Password Wrong ❌" }); }
+    const transporter = getTransporter(email, password);
 
     const mails = list.map(r => ({
       from: `"${senderName || "User"}" <${email}>`,
@@ -159,4 +149,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Stable high-delivery mail server running"));
+app.listen(PORT, () => console.log("✅ Optimized safe mail server running"));
