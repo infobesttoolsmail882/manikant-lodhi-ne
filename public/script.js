@@ -29,7 +29,6 @@ sendBtn.onclick = async () => {
   sendBtn.innerText = "Send";
 };
 
-// Logout only on double click
 logoutBtn.ondblclick = async () => {
   await fetch('/logout', { method: 'POST' });
   window.location.href = "/";
