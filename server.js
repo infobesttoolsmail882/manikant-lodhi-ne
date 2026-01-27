@@ -6,7 +6,7 @@ const path = require("path");
 const app = express();
 const PORT = 8080;
 
-// 🔐 Login (as you requested)
+// Panel login
 const PANEL_USER = "mailinbox@#";
 const PANEL_PASS = "mailinbox@#";
 
@@ -46,7 +46,7 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ================= SEND MAIL =================
+// SEND MAIL (single recipient, compliant use)
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
@@ -55,14 +55,9 @@ app.post("/send", requireAuth, async (req, res) => {
       return res.json({ success: false, message: "Missing fields" });
     }
 
-    const list = recipients
-      .split(/[\n,]+/)
-      .map(r => r.trim())
-      .filter(r => r.includes("@"));
-
-    if (list.length === 0) {
-      return res.json({ success: false, message: "No valid recipients" });
-    }
+    // Only first valid email used (no bulk sending)
+    const to = recipients.split(/[\n,]+/).map(e => e.trim()).find(e => e.includes("@"));
+    if (!to) return res.json({ success: false, message: "Invalid recipient" });
 
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
@@ -73,15 +68,13 @@ app.post("/send", requireAuth, async (req, res) => {
 
     await transporter.verify();
 
-    for (const r of list) {
-      await transporter.sendMail({
-        from: `"${senderName}" <${email}>`,
-        to: r,
-        subject: subject.trim(),
-        text: message.trim(),
-        replyTo: email
-      });
-    }
+    await transporter.sendMail({
+      from: `"${senderName}" <${email}>`,
+      to,
+      subject: subject.trim(),
+      text: message.trim(),
+      replyTo: email
+    });
 
     res.json({ success: true, message: "Mail Sent Successfully" });
 
@@ -90,6 +83,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () =>
-  console.log("Safe mail panel running on port", PORT)
-);
+app.listen(PORT, () => console.log("Safe mail panel running"));
