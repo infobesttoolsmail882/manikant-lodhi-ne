@@ -1,4 +1,5 @@
 const sendBtn = document.getElementById('sendBtn');
+const logoutBtn = document.getElementById('logoutBtn');
 
 sendBtn.onclick = async () => {
   sendBtn.disabled = true;
@@ -28,6 +29,8 @@ sendBtn.onclick = async () => {
   sendBtn.innerText = "Send";
 };
 
-function logout(){
-  fetch('/logout',{method:'POST'}).then(()=>location.href='/');
-}
+// ✅ Logout only on double click
+logoutBtn.ondblclick = async () => {
+  await fetch('/logout', { method: 'POST' });
+  window.location.href = "/";
+};
