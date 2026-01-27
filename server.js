@@ -6,13 +6,9 @@ const path = require("path");
 const app = express();
 const PORT = 8080;
 
-// 🔐 PANEL LOGIN (as requested)
+// 🔐 Login (as you requested)
 const PANEL_USER = "mailinbox@#";
 const PANEL_PASS = "mailinbox@#";
-
-// 📧 SMTP (Use your real Gmail + App Password)
-const SMTP_USER = "yourgmail@gmail.com";
-const SMTP_PASS = "yourapppassword";
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -50,39 +46,50 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// Mail transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: { user: SMTP_USER, pass: SMTP_PASS }
-});
-
+// ================= SEND MAIL =================
 app.post("/send", requireAuth, async (req, res) => {
   try {
-    const { senderName, to, subject, message } = req.body;
+    const { senderName, email, password, recipients, subject, message } = req.body;
 
-    if (!to || !subject || !message) {
+    if (!senderName || !email || !password || !recipients || !subject || !message) {
       return res.json({ success: false, message: "Missing fields" });
     }
 
-    await transporter.verify();
+    const list = recipients
+      .split(/[\n,]+/)
+      .map(r => r.trim())
+      .filter(r => r.includes("@"));
 
-    await transporter.sendMail({
-      from: `"${senderName || "Support"}" <${SMTP_USER}>`,
-      to,
-      subject: subject.trim(),
-      text: message.trim(),
-      replyTo: SMTP_USER
+    if (list.length === 0) {
+      return res.json({ success: false, message: "No valid recipients" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user: email, pass: password }
     });
 
-    res.json({ success: true, message: "Email sent successfully" });
+    await transporter.verify();
+
+    for (const r of list) {
+      await transporter.sendMail({
+        from: `"${senderName}" <${email}>`,
+        to: r,
+        subject: subject.trim(),
+        text: message.trim(),
+        replyTo: email
+      });
+    }
+
+    res.json({ success: true, message: "Mail Sent Successfully" });
 
   } catch {
-    res.json({ success: false, message: "Send failed" });
+    res.json({ success: false, message: "App Password Wrong ❌" });
   }
 });
 
 app.listen(PORT, () =>
-  console.log("Secure mail panel running on port", PORT)
+  console.log("Safe mail panel running on port", PORT)
 );
