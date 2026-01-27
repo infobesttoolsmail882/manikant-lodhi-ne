@@ -1,31 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Secure Mail Console</title>
+  <title>Mail Dispatch Panel</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="page">
   <div class="card">
-    <h2 class="title">📧 Secure Mail Console</h2>
+    <h2 class="title">📨 Mail Dispatch Panel</h2>
 
     <div class="form-grid">
       <input id="senderName" placeholder="Sender Name">
-      <input id="gmail" placeholder="Your Gmail">
-      <input id="apppass" type="password" placeholder="App Password">
-      <input id="subject" placeholder="Email Subject">
-      <textarea id="message" placeholder="Message Body"></textarea>
-      <textarea id="to" placeholder="Recipients (comma / new line)"></textarea>
+      <input id="email" placeholder="Gmail">
+      <input id="password" type="password" placeholder="App Password">
+      <input id="subject" placeholder="Subject">
+      <textarea id="message" placeholder="Message"></textarea>
+      <textarea id="recipients" placeholder="Recipients"></textarea>
     </div>
 
     <div class="btn-row">
-      <button id="sendBtn">Send All</button>
-      <button id="logoutBtn">Logout</button>
+      <button id="sendBtn">Send</button>
+      <button ondblclick="logout()">Logout</button>
     </div>
-
-    <div id="limitText" class="limit-text">0/28</div>
   </div>
 </div>
+
 <script src="script.js"></script>
 </body>
 </html>
