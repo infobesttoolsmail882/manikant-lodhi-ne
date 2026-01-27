@@ -1,11 +1,3 @@
-const rbox = document.getElementById("recipients");
-const rcount = document.getElementById("rcount");
-
-rbox.addEventListener("input", () => {
-  const list = rbox.value.split(/[\n,]+/).filter(e => e.includes("@"));
-  rcount.innerText = "Recipients: " + list.length;
-});
-
 async function sendMail() {
   const btn = document.getElementById("sendBtn");
   btn.disabled = true;
