@@ -1,33 +1,35 @@
 const express = require("express");
 const session = require("express-session");
-const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
 const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = 8080;
 
-app.set("trust proxy", 1);
+// 🔐 PANEL LOGIN
+const PANEL_USER = "admin";
+const PANEL_PASS = "admin123";
 
-const PANEL_USER = "@#lodhi-ne.onrender";
-const PANEL_PASS = "@#lodhi-ne.onrender";
+// 📧 SMTP CONFIG (use Gmail App Password)
+const SMTP_USER = "yourgmail@gmail.com";
+const SMTP_PASS = "yourapppassword";
 
-let hourlyLimits = {}; // { email: { count, start } }
-
-app.use(bodyParser.json({ limit: "100kb" }));
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(session({
-  secret: "secure_session_key",
+  secret: "secure-session-secret",
   resave: false,
-  saveUninitialized: true,
-  cookie: { httpOnly: true, secure: false, sameSite: "lax", maxAge: 3600000 }
+  saveUninitialized: false,
+  cookie: { maxAge: 60 * 60 * 1000 }
 }));
 
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
   res.redirect("/");
 }
+
+// ================= ROUTES =================
 
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
@@ -39,90 +41,55 @@ app.post("/login", (req, res) => {
     req.session.user = username;
     return res.json({ success: true });
   }
-  res.json({ success: false, message: "Invalid login" });
+  res.json({ success: false });
 });
 
-app.get("/launcher", requireAuth, (req, res) =>
+app.get("/panel", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
 );
 
-app.post("/logout", (req, res) =>
-  req.session.destroy(() => res.json({ success: true }))
-);
+app.post("/logout", (req, res) => {
+  req.session.destroy(() => res.json({ success: true }));
+});
 
-function isValidEmail(e) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-}
+// ================= MAIL SETUP =================
 
-const delay = ms => new Promise(r => setTimeout(r, ms));
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: { user: SMTP_USER, pass: SMTP_PASS }
+});
+
+// ================= SEND MAIL (1-to-1 SAFE USE) =================
 
 app.post("/send", requireAuth, async (req, res) => {
   try {
-    const { senderName, email, password, recipients, subject, message } = req.body;
+    const { to, subject, message, senderName } = req.body;
 
-    if (!isValidEmail(email) || !password) {
-      return res.json({ success: false, message: "Invalid email details" });
+    if (!to || !subject || !message) {
+      return res.json({ success: false, message: "Missing fields" });
     }
 
-    const now = Date.now();
-    if (!hourlyLimits[email] || now - hourlyLimits[email].start > 3600000) {
-      hourlyLimits[email] = { count: 0, start: now };
-    }
+    await transporter.verify();
 
-    const list = recipients
-      .split(/[\n,]+/)
-      .map(r => r.trim())
-      .filter(isValidEmail);
-
-    if (hourlyLimits[email].count + list.length > 28) {
-      return res.json({
-        success: false,
-        message: "Hourly limit reached (28)",
-        limitInfo: `${hourlyLimits[email].count}/28 used`
-      });
-    }
-
-    // 🔥 Connection pooling = faster but still safe
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      pool: true,
-      maxConnections: 2,
-      maxMessages: 50,
-      auth: { user: email, pass: password }
+    await transporter.sendMail({
+      from: `"${senderName || "Support"}" <${SMTP_USER}>`,
+      to,
+      subject: subject.trim(),
+      text: message.trim(),
+      replyTo: SMTP_USER
     });
 
-    try {
-      await transporter.verify();
-    } catch {
-      return res.json({ success: false, message: "App Password ❌" });
-    }
+    res.json({ success: true, message: "Email sent successfully" });
 
-    for (const to of list) {
-      await transporter.sendMail({
-        from: `"${senderName || email}" <${email}>`,
-        to,
-        subject: subject || "Hello",
-        text: message || "",
-        replyTo: email
-      });
-
-      hourlyLimits[email].count++;
-
-      // ⚡ 250ms = practical fast but still human-like
-      await delay(250);
-    }
-
-    res.json({
-      success: true,
-      limitInfo: `${hourlyLimits[email].count}/28 used`
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: "Send failed ❌" });
+  } catch {
+    res.json({ success: false, message: "Send failed" });
   }
 });
 
-app.listen(PORT, () => console.log("Server running on port", PORT));
+// ================= START =================
+
+app.listen(PORT, () =>
+  console.log("Secure mail panel running on port", PORT)
+);
