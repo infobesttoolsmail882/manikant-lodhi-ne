@@ -55,8 +55,9 @@ app.get("/launcher", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
 );
 
+// ✅ Logout route
 app.post("/logout", (req, res) => {
-  req.session.destroy(() => res.redirect("/"));
+  req.session.destroy(() => res.json({ success: true }));
 });
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
