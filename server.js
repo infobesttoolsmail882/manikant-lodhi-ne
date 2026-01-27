@@ -60,7 +60,7 @@ app.post("/logout", (req, res) => {
 });
 
 
-// ===== CONTROLLED SAFE SPEED (UNCHANGED) =====
+// ===== ORIGINAL SAFE SPEED =====
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
 async function sendBatch(transporter, mails) {
@@ -68,7 +68,7 @@ async function sendBatch(transporter, mails) {
     await Promise.allSettled(
       mails.slice(i, i + 5).map(m => transporter.sendMail(m))
     );
-    await delay(200);
+    await delay(300); // original speed restored
   }
 }
 
@@ -105,7 +105,6 @@ app.post("/send", requireAuth, async (req, res) => {
       mailLimits[email] = { count: 0, start: now };
     }
 
-    // Remove duplicates + invalid emails
     const list = [...new Set(
       recipients.split(/[\n,]+/)
         .map(r => r.trim())
@@ -119,7 +118,6 @@ app.post("/send", requireAuth, async (req, res) => {
       });
     }
 
-    // Single stable SMTP connection (reputation friendly)
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
@@ -157,4 +155,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Reputation-safe mail server running"));
+app.listen(PORT, () => console.log("✅ Safe mail server running (original speed)"));
