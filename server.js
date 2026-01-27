@@ -10,8 +10,8 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // 🔐 FIXED LOGIN (ID & PASSWORD SAME)
-const HARD_USERNAME = "mailinbox@#";
-const HARD_PASSWORD = "mailinbox@#";
+const HARD_USERNAME = "@#lodhi-ne.onrender";
+const HARD_PASSWORD = "@#lodhi-ne.onrender";
 
 // ================= STATE =================
 let mailLimits = {}; // { gmail: { count, start } }
@@ -22,11 +22,11 @@ app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(
   session({
-    secret: "clean-mailer-secret",
+    secret: "secure-mailer-session",
     resave: false,
     saveUninitialized: true,
     store: sessionStore,
-    cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
+    cookie: { maxAge: 60 * 60 * 1000 } // 1 hour login
   })
 );
 
@@ -47,7 +47,7 @@ app.post("/login", (req, res) => {
     req.session.user = username;
     return res.json({ success: true });
   }
-  return res.json({ success: false });
+  return res.json({ success: false, message: "Invalid login" });
 });
 
 app.get("/launcher", requireAuth, (req, res) =>
@@ -61,7 +61,7 @@ app.post("/logout", (req, res) => {
 // ================= HELPERS =================
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// ⚡ SPEED SAME: batch 5 + 300ms
+// ⚡ SAME SPEED (human-like)
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     await Promise.allSettled(
@@ -71,7 +71,7 @@ async function sendBatch(transporter, mails) {
   }
 }
 
-// ===== SUBJECT (USER EXACT, MIN CLEANUP) =====
+// ===== SUBJECT (UNCHANGED USER INPUT) =====
 function cleanSubject(subject) {
   return (subject || "Hello")
     .replace(/\r?\n/g, " ")
@@ -79,17 +79,13 @@ function cleanSubject(subject) {
     .trim();
 }
 
-// ===== BODY (USER EXACT + SAFE FOOTER) =====
-const SAFE_FOOTER = "Secure message sent."; // 3–4 words, neutral & safe
-
+// ===== BODY (PLAIN TEXT ONLY) =====
 function cleanBody(message) {
-  const body = (message || "")
+  return (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
-
-  return body ? `${body}\n\n${SAFE_FOOTER}` : SAFE_FOOTER;
 }
 
 function isValidEmail(e) {
@@ -101,10 +97,10 @@ app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
     if (!email || !password || !recipients) {
-      return res.json({ success: false });
+      return res.json({ success: false, message: "Missing fields" });
     }
 
-    // ⏱ Hourly reset
+    // ⏱ Hourly reset per sender
     const now = Date.now();
     if (!mailLimits[email] || now - mailLimits[email].start > 3600000) {
       mailLimits[email] = { count: 0, start: now };
@@ -115,7 +111,7 @@ app.post("/send", requireAuth, async (req, res) => {
       .map(r => r.trim())
       .filter(isValidEmail);
 
-    // Gmail-friendly cap
+    // Gmail safe hourly cap
     if (mailLimits[email].count + list.length > 27) {
       return res.json({
         success: false,
@@ -130,7 +126,7 @@ app.post("/send", requireAuth, async (req, res) => {
       auth: { user: email, pass: password }
     });
 
-    // Verify App Password first
+    // Verify App Password
     try {
       await transporter.verify();
     } catch {
@@ -152,12 +148,13 @@ app.post("/send", requireAuth, async (req, res) => {
       success: true,
       message: `Mail sent ✅ (${mailLimits[email].count}/27)`
     });
+
   } catch (e) {
-    return res.json({ success: false });
+    return res.json({ success: false, message: "Server error" });
   }
 });
 
 // ================= START =================
 app.listen(PORT, () =>
-  console.log("✅ Clean mail server running (safe footer added)")
+  console.log("✅ Secure mail server running (clean sending mode)")
 );
