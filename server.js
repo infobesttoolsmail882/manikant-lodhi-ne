@@ -55,11 +55,11 @@ app.get("/launcher", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
 );
 
-// ✅ Logout route
 app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
+// ===== SAFE SENDING SPEED =====
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
 async function sendBatch(transporter, mails) {
@@ -71,6 +71,7 @@ async function sendBatch(transporter, mails) {
   }
 }
 
+// ===== CLEAN INPUT =====
 function cleanSubject(subject) {
   return (subject || "Hello")
     .replace(/\r?\n/g, " ")
@@ -97,6 +98,7 @@ function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
+// ===== SEND ROUTE =====
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
@@ -107,21 +109,35 @@ app.post("/send", requireAuth, async (req, res) => {
       mailLimits[email] = { count: 0, start: now };
     }
 
-    const list = recipients.split(/[\n,]+/).map(r => r.trim()).filter(isValidEmail);
+    // Remove duplicates + invalid
+    const list = [...new Set(
+      recipients.split(/[\n,]+/)
+        .map(r => r.trim())
+        .filter(isValidEmail)
+    )];
 
     if (mailLimits[email].count + list.length > 27) {
-      return res.json({ success: false, message: `Limit Full ❌ (${mailLimits[email].count}/27)` });
+      return res.json({
+        success: false,
+        message: `Limit Full ❌ (${mailLimits[email].count}/27)`
+      });
     }
 
+    // Reuse connection (more stable reputation)
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
+      pool: true,
+      maxConnections: 1,
       auth: { user: email, pass: password }
     });
 
-    try { await transporter.verify(); }
-    catch { return res.json({ success: false, message: "App Password Wrong ❌" }); }
+    try {
+      await transporter.verify();
+    } catch {
+      return res.json({ success: false, message: "App Password Wrong ❌" });
+    }
 
     const mails = list.map(r => ({
       from: `"${senderName || "User"}" <${email}>`,
@@ -134,10 +150,13 @@ app.post("/send", requireAuth, async (req, res) => {
     await sendBatch(transporter, mails);
     mailLimits[email].count += list.length;
 
-    res.json({ success: true, message: `Mail sent ✅ (${mailLimits[email].count}/27)` });
-  } catch {
+    res.json({
+      success: true,
+      message: `Mail sent ✅ (${mailLimits[email].count}/27)`
+    });
+  } catch (err) {
     res.json({ success: false });
   }
 });
 
-app.listen(PORT, () => console.log("✅ Server running"));
+app.listen(PORT, () => console.log("✅ Safe mail server running"));
