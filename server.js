@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
@@ -10,14 +11,15 @@ const PORT = process.env.PORT || 8080;
 
 app.set("trust proxy", 1);
 
-const HARD_USERNAME = process.env.PANEL_USER;
-const HARD_PASSWORD = process.env.PANEL_PASS;
+// ✅ ENV + FALLBACK (IMPORTANT FIX)
+const HARD_USERNAME = process.env.PANEL_USER || "@#lodhi-ne.onrender";
+const HARD_PASSWORD = process.env.PANEL_PASS || "@#lodhi-ne.onrender";
 
 app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || "fallback_secret",
+  secret: process.env.SESSION_SECRET || "lodhi_secure_session",
   resave: false,
   saveUninitialized: true,
   cookie: {
