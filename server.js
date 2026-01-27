@@ -10,15 +10,12 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// 🔐 FIXED LOGIN
 const HARD_USERNAME = "mailinbox@#";
 const HARD_PASSWORD = "mailinbox@#";
 
-// ================= STATE =================
 let mailLimits = {};
 const sessionStore = new session.MemoryStore();
 
-// ================= MIDDLEWARE =================
 app.use(helmet());
 app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -33,16 +30,13 @@ app.use(
   })
 );
 
-// Login rate limit
 app.use("/login", rateLimit({ windowMs: 10 * 60 * 1000, max: 20 }));
 
-// ================= AUTH =================
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
-  return res.redirect("/");
+  res.redirect("/");
 }
 
-// ================= ROUTES =================
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
@@ -53,7 +47,7 @@ app.post("/login", (req, res) => {
     req.session.user = username;
     return res.json({ success: true });
   }
-  return res.json({ success: false });
+  res.json({ success: false });
 });
 
 app.get("/launcher", requireAuth, (req, res) =>
@@ -64,10 +58,8 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ================= HELPERS =================
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// ⚡ SAFE CONTROLLED SPEED
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     await Promise.allSettled(
@@ -77,7 +69,6 @@ async function sendBatch(transporter, mails) {
   }
 }
 
-// ===== SUBJECT CLEAN =====
 function cleanSubject(subject) {
   return (subject || "Hello")
     .replace(/\r?\n/g, " ")
@@ -85,7 +76,6 @@ function cleanSubject(subject) {
     .trim();
 }
 
-// ===== SAFE FOOTER =====
 const FOOTER_SEPARATOR = "—";
 const SAFE_FOOTER = "Secure & message sent";
 
@@ -105,13 +95,10 @@ function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-// ================= SEND =================
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
-    if (!email || !password || !recipients) {
-      return res.json({ success: false });
-    }
+    if (!email || !password || !recipients) return res.json({ success: false });
 
     const now = Date.now();
     if (!mailLimits[email] || now - mailLimits[email].start > 3600000) {
@@ -154,15 +141,13 @@ app.post("/send", requireAuth, async (req, res) => {
     await sendBatch(transporter, mails);
     mailLimits[email].count += list.length;
 
-    return res.json({
+    res.json({
       success: true,
       message: `Mail sent ✅ (${mailLimits[email].count}/27)`
     });
   } catch {
-    return res.json({ success: false });
+    res.json({ success: false });
   }
 });
 
-app.listen(PORT, () =>
-  console.log("✅ Clean mail server running safely")
-);
+app.listen(PORT, () => console.log("✅ Server running"));
