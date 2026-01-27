@@ -9,12 +9,7 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// 🔥 IMPORTANT FOR RENDER
 app.set("trust proxy", 1);
-
-// ENV login
-const HARD_USERNAME = process.env.PANEL_USER;
-const HARD_PASSWORD = process.env.PANEL_PASS;
 
 app.use(bodyParser.json({ limit: "50kb" }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -25,17 +20,13 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: true,       // works now because of trust proxy
+    secure: true,
     sameSite: "lax",
     maxAge: 60 * 60 * 1000
   }
 }));
 
-// Rate limit
-app.use("/send", rateLimit({
-  windowMs: 60 * 1000,
-  max: 3
-}));
+app.use("/send", rateLimit({ windowMs: 60 * 1000, max: 3 }));
 
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
@@ -49,11 +40,11 @@ app.get("/", (req, res) =>
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
 
-  if (!HARD_USERNAME || !HARD_PASSWORD) {
+  if (!process.env.PANEL_USER || !process.env.PANEL_PASS) {
     return res.json({ success: false, message: "Server not configured" });
   }
 
-  if (username === HARD_USERNAME && password === HARD_PASSWORD) {
+  if (username === process.env.PANEL_USER && password === process.env.PANEL_PASS) {
     req.session.user = username;
     return res.json({ success: true });
   }
@@ -106,7 +97,7 @@ app.post("/send", requireAuth, async (req, res) => {
     res.json({ success: true, message: "Mail sent successfully ✅" });
 
   } catch (err) {
-    console.error("SEND ERROR:", err);
+    console.error("MAIL ERROR:", err);
     res.json({ success: false, message: "Send failed ❌" });
   }
 });
