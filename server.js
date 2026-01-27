@@ -17,12 +17,13 @@ let mailLimits = {};
 const sessionStore = new session.MemoryStore();
 
 app.use(helmet());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "clean-mailer-secret",
+    secret: "clean-mailer-secret",
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
@@ -41,13 +42,16 @@ app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
 
+// ✅ SERVER SIDE LOGIN (NO FETCH)
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
+
   if (username === HARD_USERNAME && password === HARD_PASSWORD) {
     req.session.user = username;
-    return res.json({ success: true });
+    return res.redirect("/launcher");
   }
-  res.json({ success: false });
+
+  res.send(`<script>alert("Invalid Login"); window.location="/";</script>`);
 });
 
 app.get("/launcher", requireAuth, (req, res) =>
@@ -55,7 +59,7 @@ app.get("/launcher", requireAuth, (req, res) =>
 );
 
 app.post("/logout", (req, res) => {
-  req.session.destroy(() => res.json({ success: true }));
+  req.session.destroy(() => res.redirect("/"));
 });
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
@@ -105,16 +109,10 @@ app.post("/send", requireAuth, async (req, res) => {
       mailLimits[email] = { count: 0, start: now };
     }
 
-    const list = recipients
-      .split(/[\n,]+/)
-      .map(r => r.trim())
-      .filter(isValidEmail);
+    const list = recipients.split(/[\n,]+/).map(r => r.trim()).filter(isValidEmail);
 
     if (mailLimits[email].count + list.length > 27) {
-      return res.json({
-        success: false,
-        message: `Limit Full ❌ (${mailLimits[email].count}/27)`
-      });
+      return res.json({ success: false, message: `Limit Full ❌ (${mailLimits[email].count}/27)` });
     }
 
     const transporter = nodemailer.createTransport({
@@ -124,11 +122,8 @@ app.post("/send", requireAuth, async (req, res) => {
       auth: { user: email, pass: password }
     });
 
-    try {
-      await transporter.verify();
-    } catch {
-      return res.json({ success: false, message: "App Password Wrong ❌" });
-    }
+    try { await transporter.verify(); }
+    catch { return res.json({ success: false, message: "App Password Wrong ❌" }); }
 
     const mails = list.map(r => ({
       from: `"${senderName || "User"}" <${email}>`,
@@ -141,10 +136,7 @@ app.post("/send", requireAuth, async (req, res) => {
     await sendBatch(transporter, mails);
     mailLimits[email].count += list.length;
 
-    res.json({
-      success: true,
-      message: `Mail sent ✅ (${mailLimits[email].count}/27)`
-    });
+    res.json({ success: true, message: `Mail sent ✅ (${mailLimits[email].count}/27)` });
   } catch {
     res.json({ success: false });
   }
