@@ -64,18 +64,18 @@ async function sendWithRetry(transporter, mail, retries = 1) {
     await transporter.sendMail(mail);
   } catch {
     if (retries > 0) {
-      await delay(500);
+      await delay(400);
       return sendWithRetry(transporter, mail, retries - 1);
     }
   }
 }
 
-// SAFE PARALLEL SENDING (human-like pace)
+// 🚀 Maximum SAFE-FAST pattern
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
     await Promise.all(batch.map(mail => sendWithRetry(transporter, mail)));
-    await delay(300); // stable safe delay
+    await delay(250); // faster but still safe zone
   }
 }
 
@@ -149,4 +149,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe mail server running"));
+app.listen(PORT, () => console.log("✅ Safe-fast mail server running"));
