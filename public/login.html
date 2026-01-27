@@ -13,18 +13,22 @@
 </div>
 
 <script>
-function login(){
-  fetch('/login', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  }).then(r=>r.json()).then(d=>{
+async function login(){
+  try{
+    const res = await fetch('/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        username: username.value,
+        password: password.value
+      })
+    });
+    const d = await res.json();
     if(d.success) location.href='/launcher';
     else alert("Invalid login");
-  });
+  }catch{
+    alert("Server not responding. Try again.");
+  }
 }
 </script>
 </body>
