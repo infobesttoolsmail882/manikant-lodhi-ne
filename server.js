@@ -6,7 +6,6 @@ const path = require("path");
 const app = express();
 const PORT = 8080;
 
-// Panel login
 const PANEL_USER = "mailinbox@#";
 const PANEL_PASS = "mailinbox@#";
 
@@ -46,7 +45,6 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// SEND MAIL (single recipient, compliant use)
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
@@ -55,7 +53,7 @@ app.post("/send", requireAuth, async (req, res) => {
       return res.json({ success: false, message: "Missing fields" });
     }
 
-    // Only first valid email used (no bulk sending)
+    // Only first valid email used (safe, non-bulk)
     const to = recipients.split(/[\n,]+/).map(e => e.trim()).find(e => e.includes("@"));
     if (!to) return res.json({ success: false, message: "Invalid recipient" });
 
@@ -76,7 +74,7 @@ app.post("/send", requireAuth, async (req, res) => {
       replyTo: email
     });
 
-    res.json({ success: true, message: "Mail Sent Successfully" });
+    res.json({ success: true, message: "Mail Sent ✅" });
 
   } catch {
     res.json({ success: false, message: "App Password Wrong ❌" });
