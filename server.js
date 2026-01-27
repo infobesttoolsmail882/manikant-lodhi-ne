@@ -4,6 +4,8 @@ const session = require("express-session");
 const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
 const path = require("path");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -13,21 +15,26 @@ const HARD_USERNAME = "mailinbox@#";
 const HARD_PASSWORD = "mailinbox@#";
 
 // ================= STATE =================
-let mailLimits = {}; // { gmail: { count, start } }
+let mailLimits = {};
 const sessionStore = new session.MemoryStore();
 
 // ================= MIDDLEWARE =================
+app.use(helmet());
 app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
+
 app.use(
   session({
-    secret: "clean-mailer-secret",
+    secret: process.env.SESSION_SECRET || "clean-mailer-secret",
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     store: sessionStore,
     cookie: { maxAge: 60 * 60 * 1000 }
   })
 );
+
+// Login rate limit
+app.use("/login", rateLimit({ windowMs: 10 * 60 * 1000, max: 20 }));
 
 // ================= AUTH =================
 function requireAuth(req, res, next) {
@@ -60,7 +67,7 @@ app.post("/logout", (req, res) => {
 // ================= HELPERS =================
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// ⚡ SAME SPEED (UNCHANGED)
+// ⚡ SAFE CONTROLLED SPEED
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     await Promise.allSettled(
@@ -106,7 +113,6 @@ app.post("/send", requireAuth, async (req, res) => {
       return res.json({ success: false });
     }
 
-    // ⏱ Hourly reset
     const now = Date.now();
     if (!mailLimits[email] || now - mailLimits[email].start > 3600000) {
       mailLimits[email] = { count: 0, start: now };
@@ -158,5 +164,5 @@ app.post("/send", requireAuth, async (req, res) => {
 });
 
 app.listen(PORT, () =>
-  console.log("✅ Clean mail server running with safe footer")
+  console.log("✅ Clean mail server running safely")
 );
