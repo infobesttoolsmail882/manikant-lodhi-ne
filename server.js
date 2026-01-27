@@ -1,36 +1,43 @@
 require("dotenv").config();
+
 const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
 const path = require("path");
-const rateLimit = require("express-rate-limit");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Render proxy fix
 app.set("trust proxy", 1);
 
-app.use(bodyParser.json({ limit: "50kb" }));
-app.use(express.static(path.join(__dirname, "public")));
+// Load from .env
+const HARD_USERNAME = process.env.PANEL_USER;
+const HARD_PASSWORD = process.env.PANEL_PASS;
+
+let mailLimits = {};
+const sessionStore = new session.MemoryStore();
+
+app.use(bodyParser.json({ limit: "100kb" }));
+app.use(express.static(path.join(__dirname 彩神争霸快, "public")));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || "fallback_secret",
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
+  store: sessionStore,
   cookie: {
     httpOnly: true,
-    secure: true,
+    secure: false, // important for Render
     sameSite: "lax",
     maxAge: 60 * 60 * 1000
   }
 }));
 
-app.use("/send", rateLimit({ windowMs: 60 * 1000, max: 3 }));
-
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
-  res.redirect("/");
+  return res.redirect("/");
 }
 
 app.get("/", (req, res) =>
@@ -40,7 +47,11 @@ app.get("/", (req, res) =>
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
 
-  if (username === process.env.PANEL_USER && password === process.env.PANEL_PASS) {
+  if (!HARD_USERNAME || !HARD_PASSWORD) {
+    return res.json({ success: false, message: "Server config missing (.env)" });
+  }
+
+  if (username === HARD_USERNAME && password === HARD_PASSWORD) {
     req.session.user = username;
     return res.json({ success: true });
   }
@@ -56,20 +67,30 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-function cleanText(t) {
-  return (t || "").replace(/\r?\n{3,}/g, "\n\n").trim();
+function cleanSubject(subject) {
+  return (subject || "Hello").replace(/\r?\n/g, " ").trim();
+}
+
+function cleanBody(message) {
+  return (message || "").replace(/\r\n/g, "\n").trim();
 }
 
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
+// SEND MAIL (single recipient safe)
 app.post("/send", requireAuth, async (req, res) => {
   try {
-    const { senderName, email, password, subject, message, recipient } = req.body;
+    const { senderName, email, password, recipients, subject, message } = req.body;
 
-    if (!isValidEmail(email) || !password || !isValidEmail(recipient)) {
-      return res.json({ success: false, message: "Invalid email details" });
+    const recipient = recipients
+      .split(/[\n,]+/)
+      .map(r => r.trim())
+      .filter(isValidEmail)[0];
+
+    if (!recipient) {
+      return res.json({ success: false, message: "Invalid recipient" });
     }
 
     const transporter = nodemailer.createTransport({
@@ -82,20 +103,21 @@ app.post("/send", requireAuth, async (req, res) => {
     await transporter.verify();
 
     await transporter.sendMail({
-      from: `"${senderName || email}" <${email}>`,
+      from: `"${senderName || "User"}" <${email}>`,
       to: recipient,
-      subject: cleanText(subject) || "Hello",
-      text: cleanText(message),
-      replyTo: email,
-      headers: { "X-Mailer": "NodeMailer" }
+      subject: cleanSubject(subject),
+      text: cleanBody(message),
+      replyTo: email
     });
 
-    res.json({ success: true, message: "Mail sent successfully ✅" });
+    res.json({ success: true, message: "Mail sent ✅" });
 
   } catch (err) {
-    console.error("MAIL ERROR:", err);
+    console.error(err);
     res.json({ success: false, message: "Send failed ❌" });
   }
 });
 
-app.listen(PORT, () => console.log("Server running on port", PORT));
+app.listen(PORT, () =>
+  console.log("✅ Server running on port", PORT)
+);
