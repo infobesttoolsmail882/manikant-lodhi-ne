@@ -9,7 +9,6 @@ sendBtn.onclick = async () => {
   const res = await fetch("/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
     body: JSON.stringify({
       senderName: senderName.value,
       email: email.value,
