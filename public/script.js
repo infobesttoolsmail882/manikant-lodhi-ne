@@ -1,35 +1,29 @@
-async function sendMail() {
-  const btn = document.getElementById("sendBtn");
-  btn.disabled = true;
-  btn.innerText = "Sending...";
+const sendBtn = document.getElementById('sendBtn');
 
-  const payload = {
-    senderName: senderName.value.trim(),
-    email: gmail.value.trim(),
-    password: apppass.value.trim(),
-    recipients: recipients.value.trim(),
-    subject: subject.value.trim(),
-    message: message.value.trim()
-  };
+sendBtn.onclick = async () => {
+  sendBtn.disabled = true;
+  sendBtn.innerText = "Sending…";
 
-  try {
-    const res = await fetch("/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+  const res = await fetch('/send', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      senderName: senderName.value,
+      email: email.value,
+      password: password.value,
+      subject: subject.value,
+      message: message.value,
+      recipients: recipients.value
+    })
+  });
 
-    const data = await res.json();
-    alert(data.message);
+  const data = await res.json();
+  alert(data.message);
 
-  } catch {
-    alert("Network error");
-  }
+  sendBtn.disabled = false;
+  sendBtn.innerText = "Send";
+};
 
-  btn.disabled = false;
-  btn.innerText = "Send";
-}
-
-function logout() {
-  fetch("/logout", { method: "POST" }).then(() => location.href="/");
+function logout(){
+  fetch('/logout',{method:'POST'}).then(()=>location.href='/');
 }
