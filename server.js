@@ -9,23 +9,19 @@ const PORT = process.env.PORT || 8080;
 
 app.set("trust proxy", 1);
 
-// Fixed login
-const HARD_USERNAME = "@#lodhi-ne.onrender";
-const HARD_PASSWORD = "@#lodhi-ne.onrender";
+const PANEL_USER = "@#lodhi-ne.onrender";
+const PANEL_PASS = "@#lodhi-ne.onrender";
+
+let hourlyLimits = {}; // { email: { count, start } }
 
 app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(session({
-  secret: "lodhi_secure_session",
+  secret: "secure_session_key",
   resave: false,
   saveUninitialized: true,
-  cookie: {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 1000
-  }
+  cookie: { httpOnly: true, secure: false, sameSite: "lax", maxAge: 3600000 }
 }));
 
 function requireAuth(req, res, next) {
@@ -39,7 +35,7 @@ app.get("/", (req, res) =>
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-  if (username === HARD_USERNAME && password === HARD_PASSWORD) {
+  if (username === PANEL_USER && password === PANEL_PASS) {
     req.session.user = username;
     return res.json({ success: true });
   }
@@ -50,31 +46,40 @@ app.get("/launcher", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
 );
 
-app.post("/logout", (req, res) => {
-  req.session.destroy(() => res.json({ success: true }));
-});
-
-function cleanText(t) {
-  return (t || "").replace(/\r?\n{3,}/g, "\n\n").trim();
-}
+app.post("/logout", (req, res) =>
+  req.session.destroy(() => res.json({ success: true }))
+);
 
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-// SAFE SEND (one-by-one, no tricks)
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
 
+    if (!isValidEmail(email) || !password) {
+      return res.json({ success: false, message: "Invalid email details" });
+    }
+
+    const now = Date.now();
+    if (!hourlyLimits[email] || now - hourlyLimits[email].start > 3600000) {
+      hourlyLimits[email] = { count: 0, start: now };
+    }
+
     const list = recipients
       .split(/[\n,]+/)
       .map(r => r.trim())
-      .filter(isValidEmail)
-      .slice(0, 20); // hard safety cap
+      .filter(isValidEmail);
 
-    if (!list.length) {
-      return res.json({ success: false, message: "No valid recipients" });
+    if (hourlyLimits[email].count + list.length > 28) {
+      return res.json({
+        success: false,
+        message: "Hourly limit reached (28)",
+        limitInfo: `${hourlyLimits[email].count}/28 used`
+      });
     }
 
     const transporter = nodemailer.createTransport({
@@ -84,20 +89,29 @@ app.post("/send", requireAuth, async (req, res) => {
       auth: { user: email, pass: password }
     });
 
-    await transporter.verify();
+    try {
+      await transporter.verify();
+    } catch {
+      return res.json({ success: false, message: "App Password ❌" });
+    }
 
-    for (let to of list) {
+    for (const to of list) {
       await transporter.sendMail({
         from: `"${senderName || email}" <${email}>`,
         to,
-        subject: cleanText(subject) || "Hello",
-        text: cleanText(message),
+        subject: subject || "Hello",
+        text: message || "",
         replyTo: email
       });
-      await new Promise(r => setTimeout(r, 800)); // polite delay
+
+      hourlyLimits[email].count++;
+      await delay(1200); // safe pacing
     }
 
-    res.json({ success: true, message: "Mails sent successfully ✅" });
+    res.json({
+      success: true,
+      limitInfo: `${hourlyLimits[email].count}/28 used`
+    });
 
   } catch (err) {
     console.error(err);
