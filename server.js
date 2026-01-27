@@ -78,7 +78,7 @@ function cleanSubject(subject) {
 }
 
 const FOOTER_SEPARATOR = "—";
-const SAFE_FOOTER = "Secure & message sent";
+const SAFE_FOOTER = "Scanned & secured__";
 
 function cleanBody(message) {
   const body = (message || "")
