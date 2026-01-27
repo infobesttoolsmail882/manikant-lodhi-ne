@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
@@ -11,15 +9,15 @@ const PORT = process.env.PORT || 8080;
 
 app.set("trust proxy", 1);
 
-// ✅ ENV + FALLBACK (IMPORTANT FIX)
-const HARD_USERNAME = process.env.PANEL_USER || "@#lodhi-ne.onrender";
-const HARD_PASSWORD = process.env.PANEL_PASS || "@#lodhi-ne.onrender";
+// 🔐 FINAL FIXED LOGIN (no env, no error)
+const HARD_USERNAME = "@#lodhi-ne.onrender";
+const HARD_PASSWORD = "@#lodhi-ne.onrender";
 
 app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || "lodhi_secure_session",
+  secret: "lodhi_secure_session",
   resave: false,
   saveUninitialized: true,
   cookie: {
@@ -47,7 +45,7 @@ app.post("/login", (req, res) => {
     return res.json({ success: true });
   }
 
-  res.json({ success: false, message: "Invalid login" });
+  return res.json({ success: false, message: "Invalid login" });
 });
 
 app.get("/launcher", requireAuth, (req, res) =>
