@@ -59,7 +59,8 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ===== CONTROLLED SPEED =====
+
+// ===== CONTROLLED SAFE SPEED (UNCHANGED) =====
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
 async function sendBatch(transporter, mails) {
@@ -71,7 +72,8 @@ async function sendBatch(transporter, mails) {
   }
 }
 
-// ===== CLEAN INPUT =====
+
+// ===== CLEAN & NEUTRAL CONTENT =====
 function cleanSubject(subject) {
   return (subject || "Hello")
     .replace(/\r?\n/g, " ")
@@ -79,23 +81,18 @@ function cleanSubject(subject) {
     .trim();
 }
 
-const FOOTER_TEXT = "Scanned & secured";
-
 function cleanBody(message) {
-  const body = (message || "")
+  return (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
-
-  return body
-    ? `${body}\n\n\n${FOOTER_TEXT}`  // 2 blank lines before footer
-    : FOOTER_TEXT;
 }
 
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
+
 
 // ===== SEND ROUTE =====
 app.post("/send", requireAuth, async (req, res) => {
@@ -108,6 +105,7 @@ app.post("/send", requireAuth, async (req, res) => {
       mailLimits[email] = { count: 0, start: now };
     }
 
+    // Remove duplicates + invalid emails
     const list = [...new Set(
       recipients.split(/[\n,]+/)
         .map(r => r.trim())
@@ -121,6 +119,7 @@ app.post("/send", requireAuth, async (req, res) => {
       });
     }
 
+    // Single stable SMTP connection (reputation friendly)
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
@@ -158,4 +157,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe mail server running"));
+app.listen(PORT, () => console.log("✅ Reputation-safe mail server running"));
