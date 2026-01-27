@@ -59,7 +59,7 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ===== SAFE SENDING SPEED =====
+// ===== CONTROLLED SPEED (UNCHANGED) =====
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
 async function sendBatch(transporter, mails) {
@@ -109,7 +109,7 @@ app.post("/send", requireAuth, async (req, res) => {
       mailLimits[email] = { count: 0, start: now };
     }
 
-    // Remove duplicates + invalid
+    // Remove duplicates + invalid emails
     const list = [...new Set(
       recipients.split(/[\n,]+/)
         .map(r => r.trim())
@@ -123,13 +123,14 @@ app.post("/send", requireAuth, async (req, res) => {
       });
     }
 
-    // Reuse connection (more stable reputation)
+    // Stable single pooled connection
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
       pool: true,
       maxConnections: 1,
+      maxMessages: 50,
       auth: { user: email, pass: password }
     });
 
@@ -144,7 +145,12 @@ app.post("/send", requireAuth, async (req, res) => {
       to: r,
       subject: cleanSubject(subject),
       text: cleanBody(message),
-      replyTo: email
+      replyTo: email,
+      headers: {
+        "X-Mailer": "NodeMailer",
+        "List-Unsubscribe": `<mailto:${email}?subject=unsubscribe>`,
+        "Precedence": "bulk"
+      }
     }));
 
     await sendBatch(transporter, mails);
@@ -154,9 +160,10 @@ app.post("/send", requireAuth, async (req, res) => {
       success: true,
       message: `Mail sent ✅ (${mailLimits[email].count}/27)`
     });
+
   } catch (err) {
     res.json({ success: false });
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe mail server running"));
+app.listen(PORT, () => console.log("✅ Reputation-safe mail server running"));
