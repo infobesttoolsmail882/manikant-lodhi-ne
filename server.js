@@ -59,21 +59,23 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-
-// ===== ORIGINAL SAFE SPEED =====
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
+// ✅ SAFE PARALLEL SENDING (5 at a time)
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
+    const batch = mails.slice(i, i + 5);
+
     await Promise.allSettled(
-      mails.slice(i, i + 5).map(m => transporter.sendMail(m))
+      batch.map(mail =>
+        transporter.sendMail(mail).catch(() => null)
+      )
     );
-    await delay(300); // original speed restored
+
+    await delay(300);
   }
 }
 
-
-// ===== CLEAN & NEUTRAL CONTENT =====
 function cleanSubject(subject) {
   return (subject || "Hello")
     .replace(/\r?\n/g, " ")
@@ -93,8 +95,6 @@ function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-
-// ===== SEND ROUTE =====
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
@@ -155,4 +155,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe mail server running (original speed)"));
+app.listen(PORT, () => console.log("✅ Safe mail server running"));
