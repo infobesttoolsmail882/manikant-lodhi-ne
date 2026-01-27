@@ -21,15 +21,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use(
-  session({
-    secret: "clean-mailer-secret",
-    resave: false,
-    saveUninitialized: false,
-    store: sessionStore,
-    cookie: { maxAge: 60 * 60 * 1000 }
-  })
-);
+app.use(session({
+  secret: "clean-mailer-secret",
+  resave: false,
+  saveUninitialized: false,
+  store: sessionStore,
+  cookie: { maxAge: 60 * 60 * 1000 }
+}));
 
 app.use("/login", rateLimit({ windowMs: 10 * 60 * 1000, max: 20 }));
 
@@ -61,30 +59,13 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* ================= SAFE ADAPTIVE SPEED ================= */
-let dynamicDelay = 200; // starts fast but safe
-const MIN_DELAY = 150;
-const MAX_DELAY = 800;
-
-async function sendWithRetry(transporter, mail) {
-  try {
-    await transporter.sendMail(mail);
-    dynamicDelay = Math.max(MIN_DELAY, dynamicDelay - 10);
-  } catch {
-    dynamicDelay = Math.min(MAX_DELAY, dynamicDelay + 100);
-    await delay(400);
-    try { await transporter.sendMail(mail); } catch {}
-  }
-}
-
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
-    await Promise.all(batch.map(mail => sendWithRetry(transporter, mail)));
-    await delay(dynamicDelay);
+    await Promise.allSettled(batch.map(mail => transporter.sendMail(mail)));
+    await delay(300); // SAME SPEED
   }
 }
-/* ======================================================= */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -122,10 +103,7 @@ app.post("/send", requireAuth, async (req, res) => {
     )];
 
     if (mailLimits[email].count + list.length > 27) {
-      return res.json({
-        success: false,
-        message: `Limit Full ❌ (${mailLimits[email].count}/27)`
-      });
+      return res.json({ success: false, message: `Limit Full ❌ (${mailLimits[email].count}/27)` });
     }
 
     const transporter = nodemailer.createTransport({
@@ -134,7 +112,6 @@ app.post("/send", requireAuth, async (req, res) => {
       secure: true,
       pool: true,
       maxConnections: 1,
-      maxMessages: 100,
       auth: { user: email, pass: password }
     });
 
@@ -152,14 +129,11 @@ app.post("/send", requireAuth, async (req, res) => {
     await sendBatch(transporter, mails);
     mailLimits[email].count += list.length;
 
-    res.json({
-      success: true,
-      message: `Mail sent ✅ (${mailLimits[email].count}/27)`
-    });
+    res.json({ success: true, message: `Mail sent ✅ (${mailLimits[email].count}/27)` });
 
   } catch {
     res.json({ success: false });
   }
 });
 
-app.listen(PORT, () => console.log("✅ Adaptive safe-speed mail server running"));
+app.listen(PORT, () => console.log("✅ Safe mail server running (stable speed)"));
