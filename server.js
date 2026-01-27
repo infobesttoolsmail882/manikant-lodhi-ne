@@ -59,7 +59,7 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ===== CONTROLLED SPEED (UNCHANGED) =====
+// ===== SLIGHTLY FASTER BUT SAFE SPEED =====
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
 async function sendBatch(transporter, mails) {
@@ -67,7 +67,7 @@ async function sendBatch(transporter, mails) {
     await Promise.allSettled(
       mails.slice(i, i + 5).map(m => transporter.sendMail(m))
     );
-    await delay(300);
+    await delay(200); // was 300ms
   }
 }
 
@@ -79,12 +79,16 @@ function cleanSubject(subject) {
     .trim();
 }
 
+const FOOTER_TEXT = "Scanned & secured";
+
 function cleanBody(message) {
-  return (message || "")
+  const body = (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
+
+  return body ? `${body}\n\n${FOOTER_TEXT}` : FOOTER_TEXT;
 }
 
 function isValidEmail(e) {
@@ -102,7 +106,6 @@ app.post("/send", requireAuth, async (req, res) => {
       mailLimits[email] = { count: 0, start: now };
     }
 
-    // Remove duplicates + invalid
     const list = [...new Set(
       recipients.split(/[\n,]+/)
         .map(r => r.trim())
@@ -156,4 +159,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Clean & safe mail server running"));
+app.listen(PORT, () => console.log("✅ Safe mail server running"));
