@@ -1,18 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mail Panel</title>
+  <title>Mail Dispatch Panel</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="card">
-  <h2>Send Transactional Email</h2>
-  <input id="senderName" placeholder="Sender Name">
-  <input id="to" placeholder="Recipient Email">
-  <input id="subject" placeholder="Subject">
-  <textarea id="message" placeholder="Message"></textarea>
-  <button onclick="sendMail()">Send</button>
-  <button onclick="logout()">Logout</button>
+<div class="page">
+  <div class="card">
+    <h2 class="title">📨 Mail Dispatch Panel</h2>
+
+    <div class="form-grid">
+      <input id="senderName" placeholder="Sender Name">
+      <input id="to" placeholder="Recipient Email">
+      <input id="subject" placeholder="Subject">
+      <textarea id="message" placeholder="Message"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button onclick="sendMail()">Send</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
 </div>
 
 <script src="script.js"></script>
