@@ -82,10 +82,14 @@ app.post("/send", requireAuth, async (req, res) => {
       });
     }
 
+    // 🔥 Connection pooling = faster but still safe
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
+      pool: true,
+      maxConnections: 2,
+      maxMessages: 50,
       auth: { user: email, pass: password }
     });
 
@@ -95,7 +99,6 @@ app.post("/send", requireAuth, async (req, res) => {
       return res.json({ success: false, message: "App Password ❌" });
     }
 
-    // 🚀 MAX SAFE SPEED LOOP
     for (const to of list) {
       await transporter.sendMail({
         from: `"${senderName || email}" <${email}>`,
@@ -107,8 +110,8 @@ app.post("/send", requireAuth, async (req, res) => {
 
       hourlyLimits[email].count++;
 
-      // ⚡ 400ms = fastest still human-like
-      await delay(400);
+      // ⚡ 250ms = practical fast but still human-like
+      await delay(250);
     }
 
     res.json({
