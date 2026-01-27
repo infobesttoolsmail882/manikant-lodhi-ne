@@ -59,7 +59,7 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ===== SLIGHTLY FASTER BUT SAFE SPEED =====
+// ===== CONTROLLED SPEED =====
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
 async function sendBatch(transporter, mails) {
@@ -67,7 +67,7 @@ async function sendBatch(transporter, mails) {
     await Promise.allSettled(
       mails.slice(i, i + 5).map(m => transporter.sendMail(m))
     );
-    await delay(200); // was 300ms
+    await delay(200);
   }
 }
 
@@ -88,7 +88,9 @@ function cleanBody(message) {
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
 
-  return body ? `${body}\n\n${FOOTER_TEXT}` : FOOTER_TEXT;
+  return body
+    ? `${body}\n\n\n${FOOTER_TEXT}`  // 2 blank lines before footer
+    : FOOTER_TEXT;
 }
 
 function isValidEmail(e) {
@@ -140,10 +142,7 @@ app.post("/send", requireAuth, async (req, res) => {
       to: r,
       subject: cleanSubject(subject),
       text: cleanBody(message),
-      replyTo: email,
-      headers: {
-        "X-Mailer": "NodeMailer"
-      }
+      replyTo: email
     }));
 
     await sendBatch(transporter, mails);
