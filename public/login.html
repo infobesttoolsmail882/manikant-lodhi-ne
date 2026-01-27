@@ -7,29 +7,13 @@
 <body>
 <div class="login-box">
   <h2>Secure Access</h2>
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-</div>
 
-<script>
-async function login(){
-  try{
-    const res = await fetch('/login', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
-    });
-    const d = await res.json();
-    if(d.success) location.href='/launcher';
-    else alert("Invalid login");
-  }catch{
-    alert("Server not responding. Try again.");
-  }
-}
-</script>
+  <form method="POST" action="/login">
+    <input name="username" placeholder="Username" required>
+    <input name="password" type="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+  </form>
+
+</div>
 </body>
 </html>
