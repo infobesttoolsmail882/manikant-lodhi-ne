@@ -42,15 +42,12 @@ app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
 
-// ✅ SERVER SIDE LOGIN (NO FETCH)
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-
   if (username === HARD_USERNAME && password === HARD_PASSWORD) {
     req.session.user = username;
     return res.redirect("/launcher");
   }
-
   res.send(`<script>alert("Invalid Login"); window.location="/";</script>`);
 });
 
