@@ -59,23 +59,12 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-async function sendWithRetry(transporter, mail, retries = 1) {
-  try {
-    await transporter.sendMail(mail);
-  } catch {
-    if (retries > 0) {
-      await delay(400);
-      return sendWithRetry(transporter, mail, retries - 1);
-    }
-  }
-}
-
-// 🚀 Maximum SAFE-FAST pattern
+// SAME SAFE SPEED
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
-    await Promise.all(batch.map(mail => sendWithRetry(transporter, mail)));
-    await delay(250); // faster but still safe zone
+    await Promise.allSettled(batch.map(mail => transporter.sendMail(mail)));
+    await delay(300);
   }
 }
 
@@ -124,7 +113,6 @@ app.post("/send", requireAuth, async (req, res) => {
       secure: true,
       pool: true,
       maxConnections: 1,
-      maxMessages: 100,
       auth: { user: email, pass: password }
     });
 
@@ -149,4 +137,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe-fast mail server running"));
+app.listen(PORT, () => console.log("✅ Safe mail server running (stable speed)"));
