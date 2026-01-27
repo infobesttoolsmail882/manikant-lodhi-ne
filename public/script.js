@@ -4,13 +4,16 @@ async function sendMail() {
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({
       senderName: senderName.value,
-      to: to.value,
+      email: gmail.value,
+      password: apppass.value,
+      recipients: recipients.value,
       subject: subject.value,
       message: message.value
     })
   });
+
   const data = await res.json();
-  alert(data.message);
+  alert(data.message || (data.success ? "Mail sent" : "Send failed"));
 }
 
 function logout() {
