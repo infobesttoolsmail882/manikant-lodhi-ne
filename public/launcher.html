@@ -1,29 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mail Panel</title>
+  <title>Secure Mail Console</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="page">
   <div class="card">
-    <h2 class="title">📨 Mail Panel</h2>
+    <h2 class="title">📧 Secure Mail Console</h2>
 
     <div class="form-grid">
-      <input id="senderName" placeholder="Sender Name">
-      <input id="email" placeholder="Your Gmail">
-      <input id="password" type="password" placeholder="App Password">
-      <input id="recipient" placeholder="Recipient Email">
-      <input id="subject" placeholder="Subject">
-      <textarea id="message" placeholder="Message"></textarea>
+
+      <!-- LEFT COLUMN -->
+      <div class="col">
+        <input id="senderName" placeholder="Sender Name">
+        <input id="password" type="password" placeholder="App Password">
+        <textarea id="message" placeholder="Message Body"></textarea>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col">
+        <input id="email" placeholder="Your Gmail">
+        <input id="subject" placeholder="Email Subject">
+        <textarea id="recipients" placeholder="Recipients"></textarea>
+      </div>
+
     </div>
 
     <div class="btn-row">
-      <button id="sendBtn">Send</button>
+      <button id="sendBtn">Send All</button>
       <button onclick="logout()">Logout</button>
     </div>
 
-    <p id="status"></p>
+    <p id="status">0 / 28</p>
   </div>
 </div>
 
