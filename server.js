@@ -15,7 +15,7 @@ app.use(bodyParser.json({ limit: "50kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || "fallback_secret",
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -39,10 +39,6 @@ app.get("/", (req, res) =>
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-
-  if (!process.env.PANEL_USER || !process.env.PANEL_PASS) {
-    return res.json({ success: false, message: "Server not configured" });
-  }
 
   if (username === process.env.PANEL_USER && password === process.env.PANEL_PASS) {
     req.session.user = username;
