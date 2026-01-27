@@ -4,7 +4,6 @@ const statusBox = document.getElementById("status");
 sendBtn.onclick = async () => {
   sendBtn.disabled = true;
   sendBtn.textContent = "Sending...";
-  statusBox.textContent = "";
 
   const res = await fetch("/send", {
     method: "POST",
@@ -15,18 +14,21 @@ sendBtn.onclick = async () => {
       password: password.value,
       subject: subject.value,
       message: message.value,
-      recipient: recipient.value
+      recipients: recipients.value
     })
   });
 
   const data = await res.json();
-  statusBox.textContent = data.message;
 
   sendBtn.disabled = false;
-  sendBtn.textContent = "Send";
+  sendBtn.textContent = "Send All";
+
+  if (data.success) alert("Mails Sent ✅");
+  else alert(data.message);
+
+  statusBox.textContent = data.limitInfo || "0 / 28";
 };
 
-function logout() {
-  fetch("/logout", { method: "POST" })
-    .then(() => location.href = "/");
+function logout(){
+  fetch("/logout",{method:"POST"}).then(()=>location.href="/");
 }
