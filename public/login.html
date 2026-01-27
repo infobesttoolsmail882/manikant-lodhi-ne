@@ -20,7 +20,7 @@ async function login() {
     body: JSON.stringify({ username: user.value, password: pass.value })
   });
   const data = await res.json();
-  if (data.success) location.href="/panel";
+  if (data.success) location.href="/launcher";
   else alert("Login failed");
 }
 </script>
