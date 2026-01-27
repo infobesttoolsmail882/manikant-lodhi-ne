@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 8080;
 
 app.set("trust proxy", 1);
 
-// 🔐 FINAL FIXED LOGIN (no env, no error)
+// Fixed login
 const HARD_USERNAME = "@#lodhi-ne.onrender";
 const HARD_PASSWORD = "@#lodhi-ne.onrender";
 
@@ -39,13 +39,11 @@ app.get("/", (req, res) =>
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-
   if (username === HARD_USERNAME && password === HARD_PASSWORD) {
     req.session.user = username;
     return res.json({ success: true });
   }
-
-  return res.json({ success: false, message: "Invalid login" });
+  res.json({ success: false, message: "Invalid login" });
 });
 
 app.get("/launcher", requireAuth, (req, res) =>
@@ -64,12 +62,19 @@ function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
+// SAFE SEND (one-by-one, no tricks)
 app.post("/send", requireAuth, async (req, res) => {
   try {
-    const { senderName, email, password, recipient, subject, message } = req.body;
+    const { senderName, email, password, recipients, subject, message } = req.body;
 
-    if (!isValidEmail(email) || !password || !isValidEmail(recipient)) {
-      return res.json({ success: false, message: "Invalid email details" });
+    const list = recipients
+      .split(/[\n,]+/)
+      .map(r => r.trim())
+      .filter(isValidEmail)
+      .slice(0, 20); // hard safety cap
+
+    if (!list.length) {
+      return res.json({ success: false, message: "No valid recipients" });
     }
 
     const transporter = nodemailer.createTransport({
@@ -81,15 +86,18 @@ app.post("/send", requireAuth, async (req, res) => {
 
     await transporter.verify();
 
-    await transporter.sendMail({
-      from: `"${senderName || email}" <${email}>`,
-      to: recipient,
-      subject: cleanText(subject) || "Hello",
-      text: cleanText(message),
-      replyTo: email
-    });
+    for (let to of list) {
+      await transporter.sendMail({
+        from: `"${senderName || email}" <${email}>`,
+        to,
+        subject: cleanText(subject) || "Hello",
+        text: cleanText(message),
+        replyTo: email
+      });
+      await new Promise(r => setTimeout(r, 800)); // polite delay
+    }
 
-    res.json({ success: true, message: "Mail sent successfully ✅" });
+    res.json({ success: true, message: "Mails sent successfully ✅" });
 
   } catch (err) {
     console.error(err);
