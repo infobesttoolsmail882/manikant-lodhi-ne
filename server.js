@@ -61,7 +61,7 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// ✅ SAFE PARALLEL SENDING (5 at a time)
+// ⚡ Faster but controlled
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
@@ -72,7 +72,7 @@ async function sendBatch(transporter, mails) {
       )
     );
 
-    await delay(300);
+    await delay(150); // reduced delay (was 300)
   }
 }
 
@@ -155,4 +155,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe mail server running"));
+app.listen(PORT, () => console.log("✅ Faster but safe mail server running"));
