@@ -79,19 +79,12 @@ function cleanSubject(subject) {
     .trim();
 }
 
-const FOOTER_SEPARATOR = "—";
-const SAFE_FOOTER = "Scanned & secured__";
-
 function cleanBody(message) {
-  const body = (message || "")
+  return (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
-
-  return body
-    ? `${body}\n\n${FOOTER_SEPARATOR}\n${SAFE_FOOTER}`
-    : `${FOOTER_SEPARATOR}\n${SAFE_FOOTER}`;
 }
 
 function isValidEmail(e) {
@@ -109,7 +102,7 @@ app.post("/send", requireAuth, async (req, res) => {
       mailLimits[email] = { count: 0, start: now };
     }
 
-    // Remove duplicates + invalid emails
+    // Remove duplicates + invalid
     const list = [...new Set(
       recipients.split(/[\n,]+/)
         .map(r => r.trim())
@@ -123,7 +116,6 @@ app.post("/send", requireAuth, async (req, res) => {
       });
     }
 
-    // Stable single pooled connection
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
@@ -147,9 +139,7 @@ app.post("/send", requireAuth, async (req, res) => {
       text: cleanBody(message),
       replyTo: email,
       headers: {
-        "X-Mailer": "NodeMailer",
-        "List-Unsubscribe": `<mailto:${email}?subject=unsubscribe>`,
-        "Precedence": "bulk"
+        "X-Mailer": "NodeMailer"
       }
     }));
 
@@ -161,9 +151,9 @@ app.post("/send", requireAuth, async (req, res) => {
       message: `Mail sent ✅ (${mailLimits[email].count}/27)`
     });
 
-  } catch (err) {
+  } catch {
     res.json({ success: false });
   }
 });
 
-app.listen(PORT, () => console.log("✅ Reputation-safe mail server running"));
+app.listen(PORT, () => console.log("✅ Clean & safe mail server running"));
