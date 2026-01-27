@@ -10,21 +10,18 @@
     <h2 class="title">📨 Mail Dispatch Panel</h2>
 
     <div class="form-grid">
-      <!-- Row 1 -->
       <input id="senderName" placeholder="Sender Name">
       <input id="gmail" placeholder="Gmail">
 
-      <!-- Row 2 -->
       <input id="apppass" type="password" placeholder="App Password">
       <input id="subject" placeholder="Subject">
 
-      <!-- Row 3 -->
       <textarea id="message" placeholder="Message"></textarea>
       <textarea id="recipients" placeholder="Recipients"></textarea>
     </div>
 
     <div class="btn-row">
-      <button onclick="sendMail()">Send</button>
+      <button id="sendBtn" onclick="sendMail()">Send</button>
       <button onclick="logout()">Logout</button>
     </div>
   </div>
