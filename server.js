@@ -59,14 +59,35 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// SAME SAFE SPEED
+/* ---------- SMART SAFE DELIVERY ENGINE ---------- */
+
+async function sendWithBackoff(transporter, mail) {
+  let attempt = 0;
+  let wait = 400;
+
+  while (attempt < 2) {
+    try {
+      await transporter.sendMail(mail);
+      return;
+    } catch (err) {
+      attempt++;
+      await delay(wait);
+      wait *= 1.7; // gentle backoff
+    }
+  }
+}
+
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
-    await Promise.allSettled(batch.map(mail => transporter.sendMail(mail)));
-    await delay(300);
+
+    await Promise.all(batch.map(mail => sendWithBackoff(transporter, mail)));
+
+    await delay(280); // stable, provider-friendly pace
   }
 }
+
+/* ------------------------------------------------ */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -113,6 +134,7 @@ app.post("/send", requireAuth, async (req, res) => {
       secure: true,
       pool: true,
       maxConnections: 1,
+      maxMessages: Infinity,
       auth: { user: email, pass: password }
     });
 
@@ -137,4 +159,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe mail server running (stable speed)"));
+app.listen(PORT, () => console.log("✅ Stable high-delivery mail server running"));
