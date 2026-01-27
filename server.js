@@ -95,6 +95,7 @@ app.post("/send", requireAuth, async (req, res) => {
       return res.json({ success: false, message: "App Password ❌" });
     }
 
+    // 🚀 MAX SAFE SPEED LOOP
     for (const to of list) {
       await transporter.sendMail({
         from: `"${senderName || email}" <${email}>`,
@@ -105,7 +106,9 @@ app.post("/send", requireAuth, async (req, res) => {
       });
 
       hourlyLimits[email].count++;
-      await delay(1200); // safe pacing
+
+      // ⚡ 400ms = fastest still human-like
+      await delay(400);
     }
 
     res.json({
