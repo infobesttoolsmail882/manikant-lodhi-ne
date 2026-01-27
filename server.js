@@ -1,53 +1,47 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
 const path = require("path");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// 🔐 FIXED LOGIN (ID & PASSWORD SAME)
-const HARD_USERNAME = "@#lodhi-ne.onrender";
-const HARD_PASSWORD = "@#lodhi-ne.onrender";
-
-// ================= STATE =================
-let mailLimits = {}; // { gmail: { count, start } }
-const sessionStore = new session.MemoryStore();
-
-// ================= MIDDLEWARE =================
-app.use(bodyParser.json({ limit: "100kb" }));
+app.use(bodyParser.json({ limit: "50kb" }));
 app.use(express.static(path.join(__dirname, "public")));
-app.use(
-  session({
-    secret: "secure-mailer-session",
-    resave: false,
-    saveUninitialized: true,
-    store: sessionStore,
-    cookie: { maxAge: 60 * 60 * 1000 } // 1 hour login
-  })
-);
 
-// ================= AUTH =================
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    maxAge: 60 * 60 * 1000
+  }
+}));
+
+app.use("/send", rateLimit({ windowMs: 60 * 1000, max: 3 }));
+
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
-  return res.redirect("/");
+  res.redirect("/");
 }
 
-// ================= ROUTES =================
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-  if (username === HARD_USERNAME && password === HARD_PASSWORD) {
+  if (username === process.env.PANEL_USER && password === process.env.PANEL_PASS) {
     req.session.user = username;
     return res.json({ success: true });
   }
-  return res.json({ success: false, message: "Invalid login" });
+  res.json({ success: false, message: "Invalid login" });
 });
 
 app.get("/launcher", requireAuth, (req, res) =>
@@ -58,103 +52,50 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-// ================= HELPERS =================
-const delay = ms => new Promise(r => setTimeout(r, ms));
-
-// ⚡ SAME SPEED (human-like)
-async function sendBatch(transporter, mails) {
-  for (let i = 0; i < mails.length; i += 5) {
-    await Promise.allSettled(
-      mails.slice(i, i + 5).map(m => transporter.sendMail(m))
-    );
-    await delay(300);
-  }
-}
-
-// ===== SUBJECT (UNCHANGED USER INPUT) =====
-function cleanSubject(subject) {
-  return (subject || "Hello")
-    .replace(/\r?\n/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-// ===== BODY (PLAIN TEXT ONLY) =====
-function cleanBody(message) {
-  return (message || "")
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
-    .trim();
+function cleanText(t) {
+  return (t || "").replace(/\r?\n{3,}/g, "\n\n").trim();
 }
 
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-// ================= SEND =================
 app.post("/send", requireAuth, async (req, res) => {
   try {
-    const { senderName, email, password, recipients, subject, message } = req.body;
-    if (!email || !password || !recipients) {
-      return res.json({ success: false, message: "Missing fields" });
-    }
+    const { senderName, email, password, subject, message, recipient } = req.body;
 
-    // ⏱ Hourly reset per sender
-    const now = Date.now();
-    if (!mailLimits[email] || now - mailLimits[email].start > 3600000) {
-      mailLimits[email] = { count: 0, start: now };
-    }
-
-    const list = recipients
-      .split(/[\n,]+/)
-      .map(r => r.trim())
-      .filter(isValidEmail);
-
-    // Gmail safe hourly cap
-    if (mailLimits[email].count + list.length > 27) {
-      return res.json({
-        success: false,
-        message: `Limit Full ❌ (${mailLimits[email].count}/27)`
-      });
+    if (!isValidEmail(email) || !password || !isValidEmail(recipient)) {
+      return res.json({ success: false, message: "Invalid email details" });
     }
 
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
-      auth: { user: email, pass: password }
+      auth: { user: email, pass: password },
+      tls: { rejectUnauthorized: true }
     });
 
-    // Verify App Password
-    try {
-      await transporter.verify();
-    } catch {
-      return res.json({ success: false, message: "App Password Wrong ❌" });
-    }
+    await transporter.verify();
 
-    const mails = list.map(r => ({
-      from: `"${senderName || "User"}" <${email}>`,
-      to: r,
-      subject: cleanSubject(subject),
-      text: cleanBody(message),
-      replyTo: email
-    }));
-
-    await sendBatch(transporter, mails);
-    mailLimits[email].count += list.length;
-
-    return res.json({
-      success: true,
-      message: `Mail sent ✅ (${mailLimits[email].count}/27)`
+    await transporter.sendMail({
+      from: `"${senderName || email}" <${email}>`,
+      to: recipient,
+      subject: cleanText(subject) || "Hello",
+      text: cleanText(message),
+      replyTo: email,
+      envelope: { from: email, to: recipient },
+      headers: {
+        "X-Mailer": "NodeMailer",
+        "Auto-Submitted": "auto-generated"
+      }
     });
 
-  } catch (e) {
-    return res.json({ success: false, message: "Server error" });
+    res.json({ success: true, message: "Mail sent successfully ✅" });
+
+  } catch (err) {
+    res.json({ success: false, message: "Send failed ❌" });
   }
 });
 
-// ================= START =================
-app.listen(PORT, () =>
-  console.log("✅ Secure mail server running (clean sending mode)")
-);
+app.listen(PORT, () => console.log("Secure mail panel running"));
