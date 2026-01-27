@@ -61,18 +61,24 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// ⚡ Faster but controlled
+// Retry logic for temporary failures
+async function sendWithRetry(transporter, mail, retries = 1) {
+  try {
+    await transporter.sendMail(mail);
+  } catch {
+    if (retries > 0) {
+      await delay(400);
+      return sendWithRetry(transporter, mail, retries - 1);
+    }
+  }
+}
+
+// Controlled parallel batch
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
-
-    await Promise.allSettled(
-      batch.map(mail =>
-        transporter.sendMail(mail).catch(() => null)
-      )
-    );
-
-    await delay(150); // reduced delay (was 300)
+    await Promise.all(batch.map(mail => sendWithRetry(transporter, mail)));
+    await delay(250);
   }
 }
 
@@ -124,7 +130,7 @@ app.post("/send", requireAuth, async (req, res) => {
       secure: true,
       pool: true,
       maxConnections: 1,
-      maxMessages: 50,
+      maxMessages: 100,
       auth: { user: email, pass: password }
     });
 
@@ -155,4 +161,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Faster but safe mail server running"));
+app.listen(PORT, () => console.log("✅ Stable & safe mail server running"));
