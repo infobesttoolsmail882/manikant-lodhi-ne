@@ -60,14 +60,14 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* -------- SAFE STABLE DELIVERY ENGINE -------- */
+/* -------- STABLE HUMAN-LIKE DELIVERY -------- */
 
 async function sendWithRetry(transporter, mail, retries = 1) {
   try {
     await transporter.sendMail(mail);
-  } catch {
+  } catch (err) {
     if (retries > 0) {
-      await delay(500); // small pause before retry
+      await delay(500);
       return sendWithRetry(transporter, mail, retries - 1);
     }
   }
@@ -77,11 +77,11 @@ async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
     await Promise.all(batch.map(mail => sendWithRetry(transporter, mail)));
-    if (i + 5 < mails.length) await delay(300); // SAME SAFE SPEED
+    if (i + 5 < mails.length) await delay(300); // SAME SPEED
   }
 }
 
-/* -------------------------------------------- */
+/* ------------------------------------------- */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -148,7 +148,8 @@ app.post("/send", requireAuth, async (req, res) => {
       text: cleanBody(message),
       replyTo: email,
       headers: {
-        "X-Mailer": "NodeMailer"
+        "X-Mailer": "NodeMailer",
+        "Precedence": "bulk"   // honest bulk header (reduces spam suspicion)
       }
     }));
 
@@ -162,4 +163,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Ultra-safe stable mail server running"));
+app.listen(PORT, () => console.log("✅ Clean, compliant bulk mail server running"));
