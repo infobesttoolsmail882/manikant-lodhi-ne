@@ -4,12 +4,13 @@ const path = require("path");
 
 const app = express();
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
-const PORT = 3000;
-
-// per email hourly limit store
 const hourlyTracker = {};
+const HOURLY_LIMIT = 30; // safe cap
+const DELAY = 1200; // safe delay between mails
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function canSend(email, count) {
   const now = Date.now();
@@ -17,32 +18,26 @@ function canSend(email, count) {
     hourlyTracker[email] = { count: 0, reset: now + 3600000 };
   }
 
-  const user = hourlyTracker[email];
+  const data = hourlyTracker[email];
 
-  if (now > user.reset) {
-    user.count = 0;
-    user.reset = now + 3600000;
+  if (now > data.reset) {
+    data.count = 0;
+    data.reset = now + 3600000;
   }
 
-  return (user.count + count) <= 30; // SAFE HOURLY CAP
+  return (data.count + count) <= HOURLY_LIMIT;
 }
 
-function addCount(email, count) {
-  hourlyTracker[email].count += count;
-}
-
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/login.html"));
+});
 
 app.post("/send", async (req, res) => {
   const { senderName, gmail, appPassword, subject, message, recipients } = req.body;
-
   const list = recipients.split(/[\n,]+/).map(e => e.trim()).filter(Boolean);
 
-  if (!canSend(gmail, list.length)) {
-    return res.json({ error: "Hourly limit reached. Try later." });
-  }
+  if (!canSend(gmail, list.length))
+    return res.json({ error: "Hourly limit reached" });
 
   try {
     const transporter = nodemailer.createTransport({
@@ -55,18 +50,17 @@ app.post("/send", async (req, res) => {
         from: `"${senderName}" <${gmail}>`,
         to,
         subject,
-        text: message + "\n\n—\nThis email was sent via Secure Mail Console"
+        text: message + "\n\n---\nSent via Secure Mail Console"
       });
-
-      await sleep(1500); // SAFE DELAY (important)
+      await sleep(DELAY);
     }
 
-    addCount(gmail, list.length);
+    hourlyTracker[gmail].count += list.length;
     res.json({ success: true });
 
   } catch (err) {
-    res.json({ error: "Authentication failed or sending blocked." });
+    res.json({ error: "auth" });
   }
 });
 
-app.listen(PORT, () => console.log("Running on port " + PORT));
+app.listen(3000, () => console.log("Server started"));
