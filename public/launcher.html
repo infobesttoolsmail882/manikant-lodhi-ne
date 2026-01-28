@@ -2,30 +2,35 @@
 <html>
 <head>
   <title>Secure Mail Console</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="page">
-  <div class="card">
-    <h2 class="title">📧 Secure Mail Console</h2>
+  <div class="container">
+    <h2>📧 Secure Mail Console</h2>
 
-    <div class="form-grid">
+    <div class="row">
       <input id="senderName" placeholder="Sender Name">
       <input id="gmail" placeholder="Your Gmail">
-      <input id="apppass" type="password" placeholder="App Password">
+    </div>
+
+    <div class="row">
+      <input id="appPassword" placeholder="App Password" type="password">
       <input id="subject" placeholder="Email Subject">
+    </div>
+
+    <div class="row">
       <textarea id="message" placeholder="Message Body"></textarea>
-      <textarea id="to" placeholder="Recipients (comma / new line)"></textarea>
+      <textarea id="recipients" placeholder="Recipients (comma / new line)"></textarea>
     </div>
 
-    <div class="btn-row">
-      <button id="sendBtn">Send All</button>
-      <button id="logoutBtn">Logout</button>
+    <div class="row">
+      <button onclick="sendEmails()">Send All</button>
+      <button onclick="logout()">Logout</button>
     </div>
 
-    <div id="limitText" class="limit-text">0/28</div>
+    <p id="status"></p>
   </div>
-</div>
-<script src="script.js"></script>
+
+  <script src="script.js"></script>
 </body>
 </html>
