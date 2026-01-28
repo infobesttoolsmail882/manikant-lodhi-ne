@@ -1,73 +1,129 @@
-const express = require("express");
-const nodemailer = require("nodemailer");
-const Queue = require("bull");
+import express from "express";
+import nodemailer from "nodemailer";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+app.use(express.static(path.join(__dirname, "public")));
 
-/* ================= MAIL CONFIG (DIRECT) ================= */
-const MAIL_CONFIG = {
-  host: "smtp.yourmailserver.com",   // 🔁 change
-  port: 587,
-  secure: false,
-  auth: {
-    user: "your@email.com",          // 🔁 change
-    pass: "yourpassword"             // 🔁 change
-  }
-};
-
-/* ================= TRANSPORTER (POOLED) ================= */
-const transporter = nodemailer.createTransport({
-  ...MAIL_CONFIG,
-  pool: true,
-  maxConnections: 3,     // controlled parallelism (safe)
-  maxMessages: Infinity
+/* ===== ROOT ===== */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-/* ================= EMAIL QUEUE ================= */
-const emailQueue = new Queue("emailQueue", {
-  redis: { host: "127.0.0.1", port: 6379 }
-});
+/* ===== SPEED CONFIG (UNCHANGED) ===== */
+const HOURLY_LIMIT = 28;
+const PARALLEL = 3;
+const DELAY_MS = 120;
 
-/* ============ WORKER (PROCESSES EMAILS) ============ */
-emailQueue.process(3, async (job) => {
-  const { to, subject, text, fromName } = job.data;
+/* ===== STATS STORE ===== */
+let stats = {};
 
-  await transporter.sendMail({
-    from: `"${fromName}" <${MAIL_CONFIG.auth.user}>`,
-    to,
-    subject,
-    text
-  });
-});
+/* 🔁 RESET EVERY HOUR */
+setInterval(() => {
+  stats = {};
+  console.log("🧹 Hourly reset → limits cleared");
+}, 60 * 60 * 1000);
 
-/* ================= API TO SEND BULK ================= */
-app.post("/send-bulk", async (req, res) => {
-  const { recipients, subject, message, fromName } = req.body;
+/* ===== BASIC EMAIL VALIDATION ===== */
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
-  if (!recipients || !subject || !message) {
-    return res.status(400).json({ error: "Missing fields" });
-  }
+/* ===== SAFE SEND ENGINE ===== */
+async function sendSafely(transporter, mails) {
+  let sent = 0;
 
-  const list = recipients
-    .split(/[\n,]+/)
-    .map(e => e.trim())
-    .filter(Boolean);
+  for (let i = 0; i < mails.length; i += PARALLEL) {
+    const batch = mails.slice(i, i + PARALLEL);
 
-  for (const email of list) {
-    await emailQueue.add(
-      { to: email, subject, text: message, fromName },
-      {
-        attempts: 2,
-        backoff: { type: "fixed", delay: 3000 } // retry safely
-      }
+    const results = await Promise.allSettled(
+      batch.map(mail => transporter.sendMail(mail))
     );
+
+    results.forEach(r => {
+      if (r.status === "fulfilled") sent++;
+    });
+
+    await new Promise(r => setTimeout(r, DELAY_MS));
   }
 
-  res.json({ queued: list.length });
+  return sent;
+}
+
+/* ===== SEND API ===== */
+app.post("/send", async (req, res) => {
+  try {
+    const { senderName, gmail, apppass, to, subject, message } = req.body;
+
+    if (!gmail || !apppass || !to || !subject || !message) {
+      return res.json({ success: false, msg: "Missing Fields ❌", count: 0 });
+    }
+
+    if (!stats[gmail]) stats[gmail] = { count: 0 };
+
+    if (stats[gmail].count >= HOURLY_LIMIT) {
+      return res.json({
+        success: false,
+        msg: "Hourly limit reached ❌",
+        count: stats[gmail].count
+      });
+    }
+
+    const recipients = to
+      .split(/,|\r?\n/)
+      .map(r => r.trim())
+      .filter(isValidEmail);
+
+    const remaining = HOURLY_LIMIT - stats[gmail].count;
+    if (recipients.length > remaining) {
+      return res.json({
+        success: false,
+        msg: "Gmail hourly quota full ❌",
+        count: stats[gmail].count
+      });
+    }
+
+    /* Transport with pooling (faster, stable) */
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: gmail, pass: apppass },
+      pool: true,
+      maxConnections: 2,
+      maxMessages: Infinity
+    });
+
+    await transporter.verify();
+
+    const mails = recipients.map(r => ({
+      from: `"${senderName || "Sender"}" <${gmail}>`,
+      to: r,
+      subject: subject.trim(),
+      text: message.trim(),
+      replyTo: gmail
+    }));
+
+    const sent = await sendSafely(transporter, mails);
+    stats[gmail].count += sent;
+
+    return res.json({
+      success: true,
+      sent,
+      count: stats[gmail].count
+    });
+
+  } catch (err) {
+    console.error("Send error:", err.message);
+    return res.json({ success: false, msg: "Wrong App Password ❌", count: 0 });
+  }
 });
 
-/* ================= SERVER START ================= */
-app.listen(3000, () => {
-  console.log("Fast Safe Mail Server running on port 3000");
+/* ===== START ===== */
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("✅ Mail Server running on port", PORT);
 });
