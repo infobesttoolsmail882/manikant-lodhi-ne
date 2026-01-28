@@ -12,17 +12,25 @@ async function sendMail() {
     recipients: document.getElementById("recipients").value
   };
 
-  const res = await fetch("/send", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" }, // 🔥 REQUIRED
-    body: JSON.stringify(data) // 🔥 REQUIRED
-  });
+  try {
+    const res = await fetch("/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
 
-  const result = await res.json();
-
-  alert(result.msg);
-  document.getElementById("counter").innerText = result.count + "/28";
+    const result = await res.json();
+    alert(result.msg);
+    document.getElementById("counter").innerText = result.count + "/28";
+  } catch (err) {
+    alert("Server error ❌");
+  }
 
   btn.disabled = false;
   btn.innerText = "Send All";
+}
+
+async function logout() {
+  await fetch("/logout", { method: "POST" });
+  window.location.href = "/";
 }
