@@ -15,6 +15,7 @@ const HARD_PASSWORD = "mailinbox@#";
 
 let mailLimits = {};
 let transportCache = {};
+let suppressionList = new Set(); // 🚫 auto-skip failed addresses
 const sessionStore = new session.MemoryStore();
 
 app.use(helmet());
@@ -60,15 +61,18 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* -------- STABLE HUMAN-LIKE DELIVERY -------- */
+/* -------- HUMAN-LIKE SAFE DELIVERY -------- */
 
-async function sendWithRetry(transporter, mail, retries = 1) {
+async function sendWithCare(transporter, mail) {
   try {
     await transporter.sendMail(mail);
   } catch (err) {
-    if (retries > 0) {
+    // If hard bounce or invalid → suppress
+    if (err.responseCode >= 500) {
+      suppressionList.add(mail.to);
+    } else {
       await delay(500);
-      return sendWithRetry(transporter, mail, retries - 1);
+      try { await transporter.sendMail(mail); } catch {}
     }
   }
 }
@@ -76,12 +80,12 @@ async function sendWithRetry(transporter, mail, retries = 1) {
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
-    await Promise.all(batch.map(mail => sendWithRetry(transporter, mail)));
+    await Promise.all(batch.map(mail => sendWithCare(transporter, mail)));
     if (i + 5 < mails.length) await delay(300); // SAME SPEED
   }
 }
 
-/* ------------------------------------------- */
+/* ------------------------------------------ */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -132,7 +136,7 @@ app.post("/send", requireAuth, async (req, res) => {
     const list = [...new Set(
       recipients.split(/[\n,]+/)
         .map(r => r.trim())
-        .filter(isValidEmail)
+        .filter(r => isValidEmail(r) && !suppressionList.has(r))
     )];
 
     if (mailLimits[email].count + list.length > 27) {
@@ -146,11 +150,7 @@ app.post("/send", requireAuth, async (req, res) => {
       to: r,
       subject: cleanSubject(subject),
       text: cleanBody(message),
-      replyTo: email,
-      headers: {
-        "X-Mailer": "NodeMailer",
-        "Precedence": "bulk"   // honest bulk header (reduces spam suspicion)
-      }
+      replyTo: email
     }));
 
     await sendBatch(transporter, mails);
@@ -163,4 +163,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Clean, compliant bulk mail server running"));
+app.listen(PORT, () => console.log("✅ Ultra-safe mail server running"));
