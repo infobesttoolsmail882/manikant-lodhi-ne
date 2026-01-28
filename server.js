@@ -60,14 +60,14 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* ---------------- SAFE STABLE DELIVERY ---------------- */
+/* -------- SAFE STABLE DELIVERY ENGINE -------- */
 
 async function sendWithRetry(transporter, mail, retries = 1) {
   try {
     await transporter.sendMail(mail);
   } catch {
     if (retries > 0) {
-      await delay(500);
+      await delay(500); // small pause before retry
       return sendWithRetry(transporter, mail, retries - 1);
     }
   }
@@ -81,7 +81,7 @@ async function sendBatch(transporter, mails) {
   }
 }
 
-/* ------------------------------------------------------ */
+/* -------------------------------------------- */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -162,4 +162,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Ultra-safe mail server running"));
+app.listen(PORT, () => console.log("✅ Ultra-safe stable mail server running"));
