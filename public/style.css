@@ -1,63 +1,45 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #f3f6fb;
+  font-family: Arial;
+  background: #f2f5fb;
 }
 
 .container {
-  width: 900px;
+  width: 1250px;
   margin: 40px auto;
-  background: white;
+  background: #fff;
   padding: 25px;
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.08);
 }
 
-.container.small {
-  width: 350px;
-  text-align: center;
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 20px;
-}
+h2 { text-align: center; }
 
 .row {
   display: flex;
-  gap: 15px;
+  gap: 20px;
   margin-bottom: 15px;
 }
 
 input, textarea {
   flex: 1;
   padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
   font-size: 14px;
 }
 
-textarea {
-  height: 150px;
-  resize: none;
-}
+textarea.big { height: 180px; }
+textarea { height: 180px; }
 
 button {
   flex: 1;
   padding: 12px;
-  border: none;
-  border-radius: 8px;
   background: #3b82f6;
+  border: none;
   color: white;
   font-size: 16px;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
+  border-radius: 8px;
 }
 
 #status {
   text-align: center;
-  margin-top: 10px;
   font-weight: bold;
+  margin-top: 10px;
 }
