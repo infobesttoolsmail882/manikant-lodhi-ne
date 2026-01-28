@@ -1,4 +1,8 @@
 async function sendEmails() {
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = true;
+  status.innerText = "Sending...";
+
   const data = {
     senderName: senderName.value,
     gmail: gmail.value,
@@ -8,8 +12,6 @@ async function sendEmails() {
     recipients: recipients.value
   };
 
-  status.innerText = "Sending... please wait (rate limited for safety)";
-
   const res = await fetch("/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -17,9 +19,14 @@ async function sendEmails() {
   });
 
   const result = await res.json();
-  status.innerText = result.success
-    ? `Done! Sent: ${result.sent}`
-    : `Error: ${result.error}`;
+
+  if (result.success) {
+    status.innerText = "Mail sent ✅";
+  } else {
+    status.innerText = "Not ☒";
+  }
+
+  btn.disabled = false;
 }
 
 function logout() {
