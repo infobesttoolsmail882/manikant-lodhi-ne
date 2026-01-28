@@ -5,28 +5,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="login-box">
-  <h2>Secure Access</h2>
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
-  <button id="loginBtn">Login</button>
-</div>
-
-<script>
-document.getElementById("loginBtn").addEventListener("click", async () => {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
-  const res = await fetch('/login', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ username, password })
-  });
-
-  const data = await res.json();
-  if(data.success) window.location.href = '/panel';
-  else alert("Wrong Login");
-});
-</script>
+  <h2>Login</h2>
+  <form action="/login" method="POST">
+    <input type="password" name="password" placeholder="Enter Password" required><br>
+    <button type="submit">Login</button>
+  </form>
 </body>
 </html>
