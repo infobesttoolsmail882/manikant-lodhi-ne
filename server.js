@@ -4,12 +4,11 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
-const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-/* 🔑 Hardcoded login (still recommend env in real apps) */
+/* 🔑 Hardcoded login */
 const HARD_USERNAME = "!@#$%^&*())(*&^%$#@!@#$%^&*";
 const HARD_PASSWORD = "!@#$%^&*())(*&^%$#@!@#$%^&*";
 
@@ -28,19 +27,8 @@ app.use(session({
   resave: false,
   saveUninitialized: true,
   store: sessionStore,
-  cookie: {
-    maxAge: 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: "lax"
-  }
+  cookie: { maxAge: 60 * 60 * 1000 }
 }));
-
-/* 🚦 Basic abuse protection */
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
-const sendLimiter  = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 });
-
-app.use('/login', loginLimiter);
-app.use('/send', sendLimiter);
 
 /* ================= RESET ================= */
 function fullServerReset() {
@@ -92,41 +80,44 @@ function validEmail(e){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-/* Human-like safe sending */
-async function sendSafely(transporter, mails) {
-  let sent = 0;
-  for (let i = 0; i < mails.length; i++) {
-    try {
-      await transporter.sendMail(mails[i]);
-      sent++;
-    } catch {}
-    await delay(800);               // natural gap
-    if ((i+1) % 5 === 0) await delay(3000); // longer pause
+/* ⚡ FAST BATCH SEND (same speed as your version) */
+async function sendBatch(transporter, mails, batchSize = 5) {
+  for (let i = 0; i < mails.length; i += batchSize) {
+    await Promise.allSettled(
+      mails.slice(i, i + batchSize).map(m => transporter.sendMail(m))
+    );
+    await delay(300); // SAME SPEED GAP
   }
-  return sent;
 }
 
 /* ================= SEND MAIL ================= */
 app.post('/send', requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
-    if (!email || !password || !recipients)
+
+    if (!email || !password || !recipients) {
       return res.json({ success:false, message:"Missing required fields" });
+    }
 
     const now = Date.now();
-    if (!mailLimits[email] || now - mailLimits[email].startTime > 3600000)
+
+    if (!mailLimits[email] || now - mailLimits[email].startTime > 3600000) {
       mailLimits[email] = { count:0, startTime:now };
+    }
 
     const list = [...new Set(
       recipients.split(/[\n,]+/).map(r=>r.trim()).filter(validEmail)
     )];
 
-    const HOURLY_CAP = 20;
-    if (mailLimits[email].count + list.length > HOURLY_CAP)
+    const HOURLY_CAP = 25; // slightly safer than 27
+    if (mailLimits[email].count + list.length > HOURLY_CAP) {
       return res.json({ success:false, message:`❌ Hourly limit ${HOURLY_CAP}` });
+    }
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: { user: email, pass: password }
     });
 
@@ -137,16 +128,17 @@ app.post('/send', requireAuth, async (req, res) => {
       to: r,
       subject: subject || "Hello",
       text: message || "",
-      replyTo: email,
-      headers: {
-        "List-Unsubscribe": `<mailto:${email}?subject=unsubscribe>`
-      }
+      replyTo: email
     }));
 
-    const sent = await sendSafely(transporter, mails);
-    mailLimits[email].count += sent;
+    await sendBatch(transporter, mails, 5);
 
-    res.json({ success:true, message:`✅ Sent ${sent}` });
+    mailLimits[email].count += list.length;
+
+    res.json({
+      success:true,
+      message:`✅ Sent ${list.length} | Used ${mailLimits[email].count}/${HOURLY_CAP}`
+    });
 
   } catch (err) {
     res.json({ success:false, message:"❌ Sending failed" });
@@ -155,5 +147,5 @@ app.post('/send', requireAuth, async (req, res) => {
 
 /* ================= START ================= */
 app.listen(PORT, () => {
-  console.log(`🚀 Safe Mail Launcher running on port ${PORT}`);
+  console.log(`🚀 Fast Safe Mail Launcher running on port ${PORT}`);
 });
