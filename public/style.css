@@ -1,33 +1,49 @@
-body { font-family: Arial; background: #eef2f7; }
-
-.container {
-  width: 1250px;
-  margin: 40px auto;
-  background: #fff;
-  padding: 25px;
-  border-radius: 14px;
+body {
+  font-family: Arial;
+  background: #eef2f7;
 }
 
-.row { display: flex; gap: 20px; margin-bottom: 15px; }
+/* BIGGER CONTAINER */
+.container {
+  width: 1380px; /* thoda wider */
+  margin: 40px auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+}
 
+.row {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+/* BIGGER INPUTS */
 input, textarea {
   flex: 1;
-  padding: 12px;
-  font-size: 14px;
-  border-radius: 10px;
+  padding: 14px;
+  font-size: 15px;
+  border-radius: 12px;
   border: 1px solid #dcdcdc;
 }
 
-textarea.big, textarea { height: 200px; }
+/* BIGGER MESSAGE BOX */
+textarea.big {
+  height: 240px;
+}
+
+textarea {
+  height: 240px;
+}
 
 button {
   flex: 1;
-  padding: 14px;
+  padding: 16px;
   background: #2f6fed;
   border: none;
   color: white;
-  font-size: 16px;
-  border-radius: 12px;
+  font-size: 17px;
+  border-radius: 14px;
   cursor: pointer;
 }
 
@@ -36,7 +52,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* POPUP OVERLAY */
+/* 🔥 POPUP AT VERY TOP CENTER */
 .popup {
   position: fixed;
   top: 0;
@@ -46,18 +62,18 @@ button:disabled {
   display: none;
   justify-content: center;
   align-items: flex-start;
+  padding-top: 40px; /* very top like screenshot */
   background: rgba(0,0,0,0.45);
-  padding-top: 80px;
+  z-index: 999;
 }
 
-/* POPUP BOX */
 .popup-box {
   background: white;
-  padding: 22px 30px;
+  padding: 20px 28px;
   border-radius: 14px;
-  min-width: 380px;
+  min-width: 420px;
   text-align: left;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
   font-size: 16px;
   font-weight: 600;
   display: flex;
@@ -65,7 +81,6 @@ button:disabled {
   align-items: center;
 }
 
-/* OK BUTTON */
 .ok-btn {
   background: #6b6b00;
   padding: 8px 18px;
