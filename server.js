@@ -61,14 +61,14 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* ---------- SAFE FAST DELIVERY ENGINE ---------- */
+/* -------- SMOOTH PROVIDER SAFE-FAST ENGINE -------- */
 
 async function sendWithCare(transporter, mail) {
   try {
     await transporter.sendMail(mail);
   } catch (err) {
     if (err.responseCode >= 500) {
-      suppressionList.add(mail.to); // don't retry hard bounces
+      suppressionList.add(mail.to); // hard bounce
     } else {
       await delay(400);
       try { await transporter.sendMail(mail); } catch {}
@@ -79,12 +79,14 @@ async function sendWithCare(transporter, mail) {
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
+
     await Promise.all(batch.map(mail => sendWithCare(transporter, mail)));
-    if (i + 5 < mails.length) await delay(250); // optimized but still safe
+
+    if (i + 5 < mails.length) await delay(220); // 🔥 fast but still controlled
   }
 }
 
-/* ---------------------------------------------- */
+/* -------------------------------------------------- */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -162,4 +164,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Safe-fast mail server running"));
+app.listen(PORT, () => console.log("✅ Smooth-provider fast mail server running"));
