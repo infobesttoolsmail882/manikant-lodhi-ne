@@ -10,38 +10,38 @@ const app = express();
 app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
+/* ================= ROOT ================= */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-/* ===== SPEED CONFIG (UNCHANGED) ===== */
-const HOURLY_LIMIT = 28;
-const PARALLEL = 3;
-const DELAY_MS = 120;
+/* ================= SPEED SETTINGS ================= */
+/* (As requested — kept same) */
+const HOURLY_LIMIT = 28;     // per sender
+const PARALLEL = 3;          // 3 emails at once
+const DELAY_MS = 120;        // 120ms gap between batches
 
+/* Track per-sender hourly usage */
 let stats = {};
 
-/* Reset every hour */
+/* Auto reset every hour */
 setInterval(() => {
   stats = {};
-  console.log("🧹 Hourly reset");
+  console.log("🧹 Hourly reset — usage cleared");
 }, 60 * 60 * 1000);
 
-/* Email validation */
+/* ================= HELPERS ================= */
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/* Clean formatting (NOT spam tricks) */
-function cleanText(text) {
-  return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
 }
 
-/* Parallel safe sender */
-async function sendSafely(transporter, mails) {
+/* Parallel controlled sender */
+async function sendInBatches(transporter, mails) {
   let sent = 0;
 
   for (let i = 0; i < mails.length; i += PARALLEL) {
@@ -55,13 +55,13 @@ async function sendSafely(transporter, mails) {
       if (r.status === "fulfilled") sent++;
     });
 
-    await new Promise(r => setTimeout(r, DELAY_MS));
+    await sleep(DELAY_MS);
   }
 
   return sent;
 }
 
-/* SEND API */
+/* ================= SEND ROUTE ================= */
 app.post("/send", async (req, res) => {
   try {
     const { senderName, gmail, apppass, to, subject, message } = req.body;
@@ -90,11 +90,12 @@ app.post("/send", async (req, res) => {
     if (recipients.length > remaining) {
       return res.json({
         success: false,
-        msg: "Gmail hourly quota full ❌",
+        msg: "Sender hourly quota full ❌",
         count: stats[gmail].count
       });
     }
 
+    /* Stable pooled connection */
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: { user: gmail, pass: apppass },
@@ -109,15 +110,14 @@ app.post("/send", async (req, res) => {
       from: `"${senderName || "Sender"}" <${gmail}>`,
       to: r,
       subject: subject.trim(),
-      text: cleanText(message),
+      text: message.trim(),
       replyTo: gmail,
       headers: {
-        "X-Mailer": "NodeMailer",
-        "Precedence": "bulk"  // honest bulk header (not spam trick)
+        "List-Unsubscribe": `<mailto:${gmail}?subject=unsubscribe>`
       }
     }));
 
-    const sent = await sendSafely(transporter, mails);
+    const sent = await sendInBatches(transporter, mails);
     stats[gmail].count += sent;
 
     return res.json({
@@ -127,12 +127,13 @@ app.post("/send", async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err.message);
+    console.error("Send error:", err.message);
     return res.json({ success: false, msg: "Wrong App Password ❌", count: 0 });
   }
 });
 
+/* ================= START SERVER ================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("✅ Mail Server running on port", PORT);
+  console.log("✅ Safe Mail Server running on port", PORT);
 });
