@@ -5,6 +5,7 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
+  margin: 0;
 }
 
 .page {
@@ -26,7 +27,7 @@ body {
   margin-bottom: 20px;
 }
 
-.form-grid {
+form {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -37,26 +38,30 @@ input, textarea {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 6px;
+  font-size: 14px;
 }
 
 textarea {
   height: 80px;
+  resize: vertical;
 }
 
 .btn-row {
   display: flex;
-  justify-content: center;
-  margin-top: 15px;
+  justify-content: space-between;
+  margin-top: 10px;
 }
 
 button {
+  flex: 1;
   margin: 5px;
-  padding: 10px 20px;
+  padding: 10px;
   background-color: #007bff;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
 }
 
 button:hover {
@@ -64,6 +69,6 @@ button:hover {
 }
 
 .limit-text {
-  margin-top: 15px;
+  margin-top: 10px;
   font-weight: bold;
 }
