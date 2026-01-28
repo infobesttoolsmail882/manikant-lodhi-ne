@@ -2,24 +2,24 @@
 <html>
 <head>
   <title>Login</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container small">
-    <h2>Login</h2>
-    <input type="password" id="pass" placeholder="Enter Access Password">
+  <div class="login-box">
+    <h2>Secure Login</h2>
+    <input type="password" id="pass" placeholder="Enter Access Code">
     <button onclick="login()">Login</button>
     <p id="msg"></p>
   </div>
 
-  <script>
-    function login() {
-      if (document.getElementById("pass").value === "admin123") {
-        window.location = "launcher.html";
-      } else {
-        document.getElementById("msg").innerText = "Wrong password";
-      }
-    }
-  </script>
+<script>
+function login() {
+  if (pass.value === "@#882") {
+    window.location = "launcher.html";
+  } else {
+    msg.innerText = "Wrong password";
+  }
+}
+</script>
 </body>
 </html>
