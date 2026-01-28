@@ -12,13 +12,7 @@ const PORT = process.env.PORT || 8080;
 const USERNAME = "mailinbox@#";
 const PASSWORD = "mailinbox@#";
 
-/* 🔥 Helmet with relaxed CSP for inline scripts */
-app.use(
-  helmet({
-    contentSecurityPolicy: false
-  })
-);
-
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -35,8 +29,13 @@ function requireAuth(req, res, next) {
 }
 
 /* LOGIN */
-app.get("/", (_, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
-app.get("/login", (_, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "login.html"))
+);
+
+app.get("/login", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "login.html"))
+);
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
@@ -51,7 +50,7 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-/* PANEL */
+/* PANEL ROUTE FIX */
 app.get("/panel", requireAuth, (_, res) =>
   res.sendFile(path.join(__dirname, "public", "panel.html"))
 );
@@ -83,4 +82,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Server running"));
+app.listen(PORT, () => console.log("✅ Server running with /panel route"));
