@@ -9,38 +9,54 @@ const PORT = process.env.PORT || 8080;
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-/* ================= LIMIT CONTROL ================= */
-let mailLimits = {};
+/* ===== LIMIT TRACKING ===== */
+let stats = {};
+const HOURLY_LIMIT = 28;
 
-/* ================= HELPERS ================= */
+/* ===== HELPERS ===== */
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
 function validEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/* SAME SPEED FUNCTION (5 parallel, 300ms gap) */
-async function sendBatch(transporter, mails, batchSize = 5) {
-  for (let i = 0; i < mails.length; i += batchSize) {
-    const batch = mails.slice(i, i + batchSize);
-    await Promise.allSettled(batch.map(mail => transporter.sendMail(mail)));
+/* SAME SPEED: 5 parallel + 300ms */
+async function sendBatch(transporter, mails) {
+  let sent = 0;
+
+  for (let i = 0; i < mails.length; i += 5) {
+    const batch = mails.slice(i, i + 5);
+
+    const results = await Promise.allSettled(
+      batch.map(m => transporter.sendMail(m))
+    );
+
+    results.forEach(r => {
+      if (r.status === "fulfilled") sent++;
+    });
+
     await delay(300);
   }
+
+  return sent;
 }
 
-/* ================= SEND ROUTE ================= */
+/* ===== SEND ROUTE ===== */
 app.post("/send", async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
 
     if (!email || !password || !recipients)
-      return res.json({ success: false, message: "Missing fields" });
+      return res.json({ success: false, msg: "Missing Fields ❌", count: 0 });
 
-    const now = Date.now();
+    if (!stats[email]) stats[email] = { count: 0 };
 
-    if (!mailLimits[email] || now - mailLimits[email].time > 3600000) {
-      mailLimits[email] = { count: 0, time: now };
-    }
+    if (stats[email].count >= HOURLY_LIMIT)
+      return res.json({
+        success: false,
+        msg: "Hourly limit reached ❌",
+        count: stats[email].count
+      });
 
     const list = [...new Set(
       recipients.split(/[\n,]+/)
@@ -48,9 +64,13 @@ app.post("/send", async (req, res) => {
         .filter(validEmail)
     )];
 
-    const HOURLY_CAP = 25;
-    if (mailLimits[email].count + list.length > HOURLY_CAP)
-      return res.json({ success: false, message: "Hourly limit reached" });
+    const remaining = HOURLY_LIMIT - stats[email].count;
+    if (list.length > remaining)
+      return res.json({
+        success: false,
+        msg: "Limit exceeded ❌",
+        count: stats[email].count
+      });
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -70,26 +90,28 @@ app.post("/send", async (req, res) => {
       replyTo: email
     }));
 
-    await sendBatch(transporter, mails, 5);
-
-    mailLimits[email].count += list.length;
+    const sent = await sendBatch(transporter, mails);
+    stats[email].count += sent;
 
     return res.json({
       success: true,
-      message: `✅ Sent ${list.length} emails`
+      msg: "Mail Sent ✅",
+      count: stats[email].count
     });
 
   } catch (err) {
     console.error("MAIL ERROR:", err.message);
-    return res.json({ success: false, message: "Mail sending failed ❌" });
+    return res.json({
+      success: false,
+      msg: "Mail sending failed ❌",
+      count: 0
+    });
   }
 });
 
-/* ================= FAIL SAFE ================= */
-process.on("unhandledRejection", err => {
-  console.error("Unhandled rejection:", err);
-});
+/* ===== FAIL SAFE ===== */
+process.on("unhandledRejection", err => console.error(err));
 
 app.listen(PORT, () => {
-  console.log(`🚀 Mail server running on port ${PORT}`);
+  console.log("🚀 Mail server running on port", PORT);
 });
