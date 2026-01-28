@@ -35,21 +35,25 @@ app.post("/send", async (req, res) => {
     }
   });
 
-  // Send all emails in parallel for speed
-  const sendPromises = recipientList.map(to =>
+  // Parallel sending for speed
+  const sendTasks = recipientList.map(to =>
     transporter.sendMail({
       from: `"${senderName}" <${gmail}>`,
       to,
       subject,
-      text: message
+      text: message,
+      headers: {
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High"
+      }
     }).then(() => ({ to, status: "sent" }))
       .catch(err => ({ to, status: "failed", error: err.message }))
   );
 
-  const results = await Promise.all(sendPromises);
+  const results = await Promise.all(sendTasks);
   const sentCount = results.filter(r => r.status === "sent").length;
 
-  res.send(`Sent ${sentCount}/${recipientList.length} emails.`);
+  res.send(`✅ Sent ${sentCount}/${recipientList.length} emails.`);
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+app.listen(3000, () => console.log("🚀 Server running on port 3000"));
