@@ -1,7 +1,10 @@
 async function sendEmails() {
   const btn = document.getElementById("sendBtn");
   btn.disabled = true;
-  status.innerText = "Sending...";
+  btn.innerText = "Sending...";
+
+  const listCount = recipients.value.split(/[\n,]+/).filter(e => e.trim()).length;
+  status.innerText = `0/${listCount}`;
 
   const data = {
     senderName: senderName.value,
@@ -20,15 +23,17 @@ async function sendEmails() {
 
   const result = await res.json();
 
-  if (result.success) {
-    status.innerText = "Mail sent ✅";
-  } else if (result.error === "auth") {
-    status.innerText = "Not ☒ (Wrong App Password)";
-  } else {
-    status.innerText = result.error;
-  }
-
   btn.disabled = false;
+  btn.innerText = "Send All";
+
+  if (result.success) {
+    status.innerText = `${result.sent}/${result.total}`;
+    alert(`Mail Sent ${result.sent}/${result.total}`);
+  } else if (result.error === "auth") {
+    alert("Not ☒ (Wrong App Password)");
+  } else {
+    alert(result.error);
+  }
 }
 
 function logout() {
