@@ -9,10 +9,14 @@ const helmet = require("helmet");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+/* 🔐 LOGIN ID PASS */
 const USERNAME = "mailinbox@#";
 const PASSWORD = "mailinbox@#";
 
+/* 🛡 Security */
 app.use(helmet({ contentSecurityPolicy: false }));
+
+/* 📦 Middlewares */
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -23,17 +27,18 @@ app.use(session({
   cookie: { maxAge: 60 * 60 * 1000 }
 }));
 
+/* 🔒 Auth Check */
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
   res.redirect("/login");
 }
 
-/* LOGIN */
-app.get("/", (_, res) =>
+/* 🔑 LOGIN ROUTES */
+app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
 
-app.get("/login", (_, res) =>
+app.get("/login", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
 
@@ -50,12 +55,12 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-/* PANEL ROUTE FIX */
-app.get("/panel", requireAuth, (_, res) =>
-  res.sendFile(path.join(__dirname, "public", "panel.html"))
-);
+/* 🟢 ✅ PANEL ROUTE — FIX FOR NOT FOUND */
+app.get("/panel", requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "panel.html"));
+});
 
-/* EMAIL SEND */
+/* 📧 EMAIL SEND (single mail safe) */
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { email, password, to, subject, message } = req.body;
@@ -82,4 +87,5 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Server running with /panel route"));
+/* 🚀 Start Server */
+app.listen(PORT, () => console.log("✅ Server running with /panel working"));
