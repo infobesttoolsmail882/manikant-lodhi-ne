@@ -6,15 +6,15 @@
 </head>
 <body>
   <h2>Secure Mail Console</h2>
-  <form action="/send" method="POST">
+  <form action="/send" method="POST" onsubmit="return updateCounter()">
     <input type="text" name="senderName" placeholder="Sender Name" required><br>
     <input type="email" name="gmail" placeholder="Your Gmail" required><br>
     <input type="password" name="appPassword" placeholder="App Password" required><br>
     <input type="text" name="subject" placeholder="Email Subject" required><br>
     <textarea name="message" placeholder="Message Body" required></textarea><br>
-    <textarea name="recipients" placeholder="Recipients (comma / new line)" required></textarea><br>
+    <textarea name="recipients" id="recipients" placeholder="Recipients (comma / new line)" required></textarea><br>
     <button type="submit">Send All</button>
-    <button type="button" onclick="location.href='login.html'">Logout</button>
+    <button type="button" onclick="window.location.href='login.html'">Logout</button>
     <p id="counter">0/0</p>
   </form>
   <script src="script.js"></script>
