@@ -61,16 +61,16 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* -------- SMOOTH PROVIDER SAFE-FAST ENGINE -------- */
+/* -------- REPUTATION-SAFE DELIVERY ENGINE -------- */
 
 async function sendWithCare(transporter, mail) {
   try {
     await transporter.sendMail(mail);
   } catch (err) {
     if (err.responseCode >= 500) {
-      suppressionList.add(mail.to); // hard bounce
+      suppressionList.add(mail.to); // hard bounce → never retry
     } else {
-      await delay(400);
+      await delay(500);
       try { await transporter.sendMail(mail); } catch {}
     }
   }
@@ -79,14 +79,12 @@ async function sendWithCare(transporter, mail) {
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
-
     await Promise.all(batch.map(mail => sendWithCare(transporter, mail)));
-
-    if (i + 5 < mails.length) await delay(220); // 🔥 fast but still controlled
+    if (i + 5 < mails.length) await delay(300); // SAME SPEED
   }
 }
 
-/* -------------------------------------------------- */
+/* ----------------------------------------------- */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -95,12 +93,16 @@ function cleanSubject(subject) {
     .trim();
 }
 
+const SAFE_FOOTER = "Scanned __ secured";
+
 function cleanBody(message) {
-  return (message || "")
+  const body = (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
+
+  return body ? `${body}\n\n${SAFE_FOOTER}` : SAFE_FOOTER;
 }
 
 function isValidEmail(e) {
@@ -164,4 +166,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Smooth-provider fast mail server running"));
+app.listen(PORT, () => console.log("✅ Inbox-friendly mail server running"));
