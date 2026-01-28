@@ -8,20 +8,17 @@
   <div class="page">
     <div class="card">
       <h2 class="title">📧 Secure Mail Console</h2>
-
       <form action="/send" method="POST" onsubmit="return updateCounter()">
-        <input id="senderName" name="senderName" placeholder="Sender Name" required>
-        <input id="gmail" name="gmail" placeholder="Your Gmail" required>
-        <input id="apppass" name="appPassword" type="password" placeholder="App Password" required>
-        <input id="subject" name="subject" placeholder="Email Subject" required>
-        <textarea id="message" name="message" placeholder="Message Body" required></textarea>
+        <input name="senderName" placeholder="Sender Name" required>
+        <input name="gmail" placeholder="Your Gmail" required>
+        <input name="appPassword" type="password" placeholder="App Password" required>
+        <input name="subject" placeholder="Email Subject" required>
+        <textarea name="message" placeholder="Message Body" required></textarea>
         <textarea id="to" name="recipients" placeholder="Recipients (comma / new line)" required></textarea>
-
         <div class="btn-row">
-          <button id="sendBtn" type="submit">Send All</button>
-          <button id="logoutBtn" type="button" onclick="window.location.href='login.html'">Logout</button>
+          <button type="submit">Send All</button>
+          <button type="button" onclick="window.location.href='login.html'">Logout</button>
         </div>
-
         <div id="limitText" class="limit-text">0/28</div>
       </form>
     </div>
