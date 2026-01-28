@@ -44,19 +44,22 @@ async function sendBatch(transporter, mails) {
 /* ===== SEND ROUTE ===== */
 app.post("/send", async (req, res) => {
   try {
-    const { senderName, email, password, recipients, subject, message } = req.body;
+    // ⬇️ FIELD NAMES MATCH FRONTEND
+    const { sender, gmail, appPassword, subject, body, recipients } = req.body;
 
-    if (!email || !password || !recipients)
+    if (!sender || !gmail || !appPassword || !subject || !body || !recipients) {
       return res.json({ success: false, msg: "Missing Fields ❌", count: 0 });
+    }
 
-    if (!stats[email]) stats[email] = { count: 0 };
+    if (!stats[gmail]) stats[gmail] = { count: 0 };
 
-    if (stats[email].count >= HOURLY_LIMIT)
+    if (stats[gmail].count >= HOURLY_LIMIT) {
       return res.json({
         success: false,
         msg: "Hourly limit reached ❌",
-        count: stats[email].count
+        count: stats[gmail].count
       });
+    }
 
     const list = [...new Set(
       recipients.split(/[\n,]+/)
@@ -64,17 +67,18 @@ app.post("/send", async (req, res) => {
         .filter(validEmail)
     )];
 
-    const remaining = HOURLY_LIMIT - stats[email].count;
-    if (list.length > remaining)
+    const remaining = HOURLY_LIMIT - stats[gmail].count;
+    if (list.length > remaining) {
       return res.json({
         success: false,
         msg: "Limit exceeded ❌",
-        count: stats[email].count
+        count: stats[gmail].count
       });
+    }
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
-      auth: { user: email, pass: password },
+      auth: { user: gmail, pass: appPassword },
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 15000
@@ -83,20 +87,20 @@ app.post("/send", async (req, res) => {
     await transporter.verify();
 
     const mails = list.map(to => ({
-      from: `"${senderName || "Sender"}" <${email}>`,
+      from: `"${sender}" <${gmail}>`,
       to,
-      subject: subject || "Hello",
-      text: message || "",
-      replyTo: email
+      subject,
+      text: body,
+      replyTo: gmail
     }));
 
     const sent = await sendBatch(transporter, mails);
-    stats[email].count += sent;
+    stats[gmail].count += sent;
 
     return res.json({
       success: true,
       msg: "Mail Sent ✅",
-      count: stats[email].count
+      count: stats[gmail].count
     });
 
   } catch (err) {
@@ -108,9 +112,6 @@ app.post("/send", async (req, res) => {
     });
   }
 });
-
-/* ===== FAIL SAFE ===== */
-process.on("unhandledRejection", err => console.error(err));
 
 app.listen(PORT, () => {
   console.log("🚀 Mail server running on port", PORT);
