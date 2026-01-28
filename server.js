@@ -15,7 +15,7 @@ const HARD_PASSWORD = "mailinbox@#";
 
 let mailLimits = {};
 let transportCache = {};
-let suppressionList = new Set(); // 🚫 auto-skip failed addresses
+let suppressionList = new Set();
 const sessionStore = new session.MemoryStore();
 
 app.use(helmet());
@@ -61,15 +61,14 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* -------- HUMAN-LIKE SAFE DELIVERY -------- */
+/* -------- REPUTATION-SAFE DELIVERY -------- */
 
 async function sendWithCare(transporter, mail) {
   try {
     await transporter.sendMail(mail);
   } catch (err) {
-    // If hard bounce or invalid → suppress
     if (err.responseCode >= 500) {
-      suppressionList.add(mail.to);
+      suppressionList.add(mail.to); // hard bounce → never retry
     } else {
       await delay(500);
       try { await transporter.sendMail(mail); } catch {}
@@ -163,4 +162,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Ultra-safe mail server running"));
+app.listen(PORT, () => console.log("✅ Inbox-friendly safe mail server running"));
