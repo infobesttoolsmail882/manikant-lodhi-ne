@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Secure Mail Console</title>
+  <title>Mail Console</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,7 +27,14 @@
       <button ondblclick="logout()">Logout</button>
     </div>
 
-    <p id="status">0/0</p>
+  </div>
+
+  <!-- RESULT POPUP -->
+  <div id="popup" class="popup">
+    <div class="popup-box">
+      <p id="popupText"></p>
+      <button onclick="closePopup()">OK</button>
+    </div>
   </div>
 
 <script src="script.js"></script>
