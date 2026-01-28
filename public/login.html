@@ -9,23 +9,27 @@
   <h2>Secure Access</h2>
   <input id="username" placeholder="Username">
   <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
+  <button id="loginBtn">Login</button>
 </div>
 
 <script>
-function login(){
-  fetch('/login', {
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch('/login', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  }).then(r=>r.json()).then(d=>{
-    if(d.success) location.href='/panel';
-    else alert("Wrong Login");
+    body: JSON.stringify({ username, password })
   });
-}
+
+  const data = await res.json();
+  if(data.success) {
+    window.location.href = '/panel';
+  } else {
+    alert("Wrong Login");
+  }
+});
 </script>
 </body>
 </html>
