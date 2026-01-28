@@ -1,4 +1,9 @@
 async function sendEmails() {
+  if (!senderName.value || !gmail.value || !appPassword.value || !subject.value || !message.value || !recipients.value) {
+    showPopup("Missing Fields ❌");
+    return;
+  }
+
   const btn = document.getElementById("sendBtn");
   btn.disabled = true;
   btn.innerText = "Sending...";
@@ -28,7 +33,7 @@ async function sendEmails() {
   if (result.success) {
     showPopup(`Mail Sent ${result.sent}/${result.total}`);
   } else if (result.error === "auth") {
-    showPopup("Not ☒ (Wrong App Password)");
+    showPopup("Wrong App Password ❌");
   } else {
     showPopup(result.error);
   }
