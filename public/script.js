@@ -1,53 +1,42 @@
-async function sendEmails() {
-  if (!senderName.value || !gmail.value || !appPassword.value || !subject.value || !message.value || !recipients.value) {
-    showPopup("Missing Fields ❌");
-    return;
-  }
+let sending = false;
 
-  const btn = document.getElementById("sendBtn");
-  btn.disabled = true;
-  btn.innerText = "Sending...";
+const sendBtn = document.getElementById("sendBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const limitText = document.getElementById("limitText");
 
-  const total = recipients.value.split(/[\n,]+/).filter(e => e.trim()).length;
+sendBtn.addEventListener("click", () => {
+  if (!sending) sendMail();
+});
 
-  const data = {
-    senderName: senderName.value,
-    gmail: gmail.value,
-    appPassword: appPassword.value,
-    subject: subject.value,
-    message: message.value,
-    recipients: recipients.value
-  };
+logoutBtn.addEventListener("dblclick", () => {
+  if (!sending) location.href = "/login.html";
+});
+
+async function sendMail() {
+  sending = true;
+  sendBtn.disabled = true;
+  sendBtn.innerText = "Sending…";
 
   const res = await fetch("/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
+    body: JSON.stringify({
+      senderName: senderName.value,
+      gmail: gmail.value,
+      apppass: apppass.value,
+      subject: subject.value,
+      message: message.value,
+      to: to.value
+    })
   });
 
-  const result = await res.json();
+  const data = await res.json();
 
-  btn.disabled = false;
-  btn.innerText = "Send All";
+  sending = false;
+  sendBtn.disabled = false;
+  sendBtn.innerText = "Send All";
 
-  if (result.success) {
-    showPopup(`Mail Sent ${result.sent}/${result.total}`);
-  } else if (result.error === "auth") {
-    showPopup("Wrong App Password ❌");
-  } else {
-    showPopup(result.error);
-  }
-}
-
-function showPopup(msg) {
-  popupText.innerText = msg;
-  popup.style.display = "flex";
-}
-
-function closePopup() {
-  popup.style.display = "none";
-}
-
-function logout() {
-  window.location = "login.html";
+  limitText.innerText = `${data.count}/28`;
+  if (!data.success) return alert(data.msg);
+  alert(`Mail Send Successful ✅\nSent: ${data.sent}`);
 }
