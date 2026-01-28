@@ -61,14 +61,14 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* -------- STABLE REPUTATION-FRIENDLY DELIVERY -------- */
+/* -------- REPUTATION-SAFE DELIVERY ENGINE -------- */
 
 async function sendWithCare(transporter, mail) {
   try {
     await transporter.sendMail(mail);
   } catch (err) {
     if (err.responseCode >= 500) {
-      suppressionList.add(mail.to); // hard bounce → never send again
+      suppressionList.add(mail.to); // hard bounce → never retry
     } else {
       await delay(500);
       try { await transporter.sendMail(mail); } catch {}
@@ -84,7 +84,7 @@ async function sendBatch(transporter, mails) {
   }
 }
 
-/* ----------------------------------------------------- */
+/* ----------------------------------------------- */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -93,16 +93,12 @@ function cleanSubject(subject) {
     .trim();
 }
 
-const SAFE_FOOTER = "Scanned __ secured";
-
 function cleanBody(message) {
-  const body = (message || "")
+  return (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
-
-  return body ? `${body}\n\n${SAFE_FOOTER}` : SAFE_FOOTER;
 }
 
 function isValidEmail(e) {
@@ -166,4 +162,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Extra-safe mail server running"));
+app.listen(PORT, () => console.log("✅ Ultra-clean mail server running"));
