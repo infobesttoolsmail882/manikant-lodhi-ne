@@ -1,59 +1,73 @@
 const express = require("express");
 const nodemailer = require("nodemailer");
-const bodyParser = require("body-parser");
 const path = require("path");
 
 const app = express();
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static("public"));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.static(path.join(__dirname, "public")));
 
-const LOGIN_USER = "admin";
-const LOGIN_PASS = "lodhi882@#";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
-});
+// 🚦 SAFETY LIMITS
+const MAX_RECIPIENTS_PER_REQUEST = 50; // prevent abuse
+const DELAY_BETWEEN_EMAILS_MS = 2000;  // 2 sec gap (important!)
 
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  if (username === LOGIN_USER && password === LOGIN_PASS) {
-    res.redirect("/launcher.html");
-  } else {
-    res.send("Invalid credentials");
+app.post("/send", async (req, res) => {
+  try {
+    const {
+      senderName,
+      gmail,
+      appPassword,
+      subject,
+      message,
+      recipients
+    } = req.body;
+
+    if (!gmail || !appPassword)
+      return res.status(400).json({ error: "Email credentials required" });
+
+    const list = recipients
+      .split(/[\n,]+/)
+      .map(e => e.trim())
+      .filter(e => e);
+
+    if (list.length === 0)
+      return res.status(400).json({ error: "Recipient list empty" });
+
+    if (list.length > MAX_RECIPIENTS_PER_REQUEST)
+      return res.status(400).json({ error: "Too many recipients at once" });
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: gmail,
+        pass: appPassword
+      }
+    });
+
+    let sent = 0;
+
+    for (const to of list) {
+      await transporter.sendMail({
+        from: `"${senderName}" <${gmail}>`,
+        to,
+        subject,
+        text: message,
+        headers: {
+          "List-Unsubscribe": `<mailto:${gmail}?subject=unsubscribe>`
+        }
+      });
+
+      sent++;
+      await sleep(DELAY_BETWEEN_EMAILS_MS); // slow sending = safer
+    }
+
+    res.json({ success: true, sent });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Sending failed", detail: err.message });
   }
 });
 
-app.post("/send", async (req, res) => {
-  const { senderName, gmail, appPassword, subject, message, recipients } = req.body;
-  const recipientList = recipients.split(/,|\n/).map(r => r.trim()).filter(r => r);
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: gmail,
-      pass: appPassword
-    }
-  });
-
-  // Parallel sending for speed
-  const sendTasks = recipientList.map(to =>
-    transporter.sendMail({
-      from: `"${senderName}" <${gmail}>`,
-      to,
-      subject,
-      text: message,
-      headers: {
-        "X-Priority": "1",
-        "X-MSMail-Priority": "High"
-      }
-    }).then(() => ({ to, status: "sent" }))
-      .catch(err => ({ to, status: "failed", error: err.message }))
-  );
-
-  const results = await Promise.all(sendTasks);
-  const sentCount = results.filter(r => r.status === "sent").length;
-
-  res.send(`✅ Sent ${sentCount}/${recipientList.length} emails.`);
-});
-
-app.listen(3000, () => console.log("🚀 Server running on port 3000"));
+app.listen(3000, () => console.log("Server running on http://localhost:3000"));
