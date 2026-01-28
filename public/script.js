@@ -1,42 +1,27 @@
-let sending = false;
+async function sendEmails() {
+  const data = {
+    senderName: senderName.value,
+    gmail: gmail.value,
+    appPassword: appPassword.value,
+    subject: subject.value,
+    message: message.value,
+    recipients: recipients.value
+  };
 
-const sendBtn = document.getElementById("sendBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const limitText = document.getElementById("limitText");
-
-sendBtn.addEventListener("click", () => {
-  if (!sending) sendMail();
-});
-
-logoutBtn.addEventListener("dblclick", () => {
-  if (!sending) location.href = "/login.html";
-});
-
-async function sendMail() {
-  sending = true;
-  sendBtn.disabled = true;
-  sendBtn.innerText = "Sending…";
+  status.innerText = "Sending... please wait (rate limited for safety)";
 
   const res = await fetch("/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      senderName: senderName.value,
-      gmail: gmail.value,
-      apppass: apppass.value,
-      subject: subject.value,
-      message: message.value,
-      to: to.value
-    })
+    body: JSON.stringify(data)
   });
 
-  const data = await res.json();
+  const result = await res.json();
+  status.innerText = result.success
+    ? `Done! Sent: ${result.sent}`
+    : `Error: ${result.error}`;
+}
 
-  sending = false;
-  sendBtn.disabled = false;
-  sendBtn.innerText = "Send All";
-
-  limitText.innerText = `${data.count}/28`;
-  if (!data.success) return alert(data.msg);
-  alert(`Mail Send Successful ✅\nSent: ${data.sent}`);
+function logout() {
+  window.location = "login.html";
 }
