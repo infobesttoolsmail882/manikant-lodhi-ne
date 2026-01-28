@@ -12,7 +12,13 @@ const PORT = process.env.PORT || 8080;
 const USERNAME = "mailinbox@#";
 const PASSWORD = "mailinbox@#";
 
-app.use(helmet());
+/* 🔥 Helmet with relaxed CSP for inline scripts */
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
+
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -50,7 +56,7 @@ app.get("/panel", requireAuth, (_, res) =>
   res.sendFile(path.join(__dirname, "public", "panel.html"))
 );
 
-/* EMAIL SEND (single safe send) */
+/* EMAIL SEND */
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { email, password, to, subject, message } = req.body;
