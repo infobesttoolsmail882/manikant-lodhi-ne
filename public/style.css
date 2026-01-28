@@ -10,6 +10,7 @@ form {
   padding: 20px;
   display: inline-block;
   border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 input, textarea {
@@ -18,6 +19,10 @@ input, textarea {
   padding: 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
+}
+
+textarea {
+  height: 80px;
 }
 
 button {
