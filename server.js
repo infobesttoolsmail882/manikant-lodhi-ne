@@ -27,7 +27,7 @@ app.post("/send", async (req, res) => {
   const { senderName, gmail, appPassword, subject, message, recipients } = req.body;
   const recipientList = recipients.split(/,|\n/).map(r => r.trim()).filter(r => r);
 
-  let transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: gmail,
@@ -35,20 +35,19 @@ app.post("/send", async (req, res) => {
     }
   });
 
-  let sentCount = 0;
-  for (let to of recipientList) {
-    try {
-      await transporter.sendMail({
-        from: `"${senderName}" <${gmail}>`,
-        to,
-        subject,
-        text: message
-      });
-      sentCount++;
-    } catch (err) {
-      console.error(`Failed to send to ${to}:`, err.message);
-    }
-  }
+  // Send all emails in parallel for speed
+  const sendPromises = recipientList.map(to =>
+    transporter.sendMail({
+      from: `"${senderName}" <${gmail}>`,
+      to,
+      subject,
+      text: message
+    }).then(() => ({ to, status: "sent" }))
+      .catch(err => ({ to, status: "failed", error: err.message }))
+  );
+
+  const results = await Promise.all(sendPromises);
+  const sentCount = results.filter(r => r.status === "sent").length;
 
   res.send(`Sent ${sentCount}/${recipientList.length} emails.`);
 });
