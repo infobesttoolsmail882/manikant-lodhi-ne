@@ -60,13 +60,28 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
+/* ---------------- SAFE STABLE DELIVERY ---------------- */
+
+async function sendWithRetry(transporter, mail, retries = 1) {
+  try {
+    await transporter.sendMail(mail);
+  } catch {
+    if (retries > 0) {
+      await delay(500);
+      return sendWithRetry(transporter, mail, retries - 1);
+    }
+  }
+}
+
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
-    await Promise.allSettled(batch.map(mail => transporter.sendMail(mail)));
-    if (i + 5 < mails.length) await delay(300);
+    await Promise.all(batch.map(mail => sendWithRetry(transporter, mail)));
+    if (i + 5 < mails.length) await delay(300); // SAME SAFE SPEED
   }
 }
+
+/* ------------------------------------------------------ */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -75,16 +90,12 @@ function cleanSubject(subject) {
     .trim();
 }
 
-const SAFE_FOOTER = "— Message delivered securely";
-
 function cleanBody(message) {
-  const body = (message || "")
+  return (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
-
-  return body ? `${body}\n\n${SAFE_FOOTER}` : SAFE_FOOTER;
 }
 
 function isValidEmail(e) {
@@ -137,8 +148,7 @@ app.post("/send", requireAuth, async (req, res) => {
       text: cleanBody(message),
       replyTo: email,
       headers: {
-        "X-Mailer": "NodeMailer",
-        "X-Priority": "3"
+        "X-Mailer": "NodeMailer"
       }
     }));
 
@@ -152,4 +162,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Low-spam safe mail server running"));
+app.listen(PORT, () => console.log("✅ Ultra-safe mail server running"));
