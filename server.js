@@ -61,14 +61,14 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* -------- REPUTATION-SAFE DELIVERY ENGINE -------- */
+/* -------- STABLE REPUTATION-FRIENDLY DELIVERY -------- */
 
 async function sendWithCare(transporter, mail) {
   try {
     await transporter.sendMail(mail);
   } catch (err) {
     if (err.responseCode >= 500) {
-      suppressionList.add(mail.to); // hard bounce → never retry
+      suppressionList.add(mail.to); // hard bounce → never send again
     } else {
       await delay(500);
       try { await transporter.sendMail(mail); } catch {}
@@ -84,7 +84,7 @@ async function sendBatch(transporter, mails) {
   }
 }
 
-/* ----------------------------------------------- */
+/* ----------------------------------------------------- */
 
 function cleanSubject(subject) {
   return (subject || "Hello")
@@ -166,4 +166,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Inbox-friendly mail server running"));
+app.listen(PORT, () => console.log("✅ Extra-safe mail server running"));
