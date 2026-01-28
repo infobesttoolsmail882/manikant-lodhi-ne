@@ -31,10 +31,17 @@ app.use(session({
 
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
-  res.redirect("/");
+  res.redirect("/login");
 }
 
+/* ================= LOGIN FIX ================= */
+
+// BOTH / and /login show login page
 app.get("/", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "login.html"))
+);
+
+app.get("/login", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
 
@@ -47,6 +54,8 @@ app.post("/login", (req, res) => {
   res.json({ success: false });
 });
 
+/* ============================================ */
+
 app.get("/launcher", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
 );
@@ -57,26 +66,20 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-/* -------- SAFE FAST DELIVERY ENGINE -------- */
-
 async function sendWithCare(transporter, mail) {
   try {
     await transporter.sendMail(mail);
   } catch (err) {
-    if (err.responseCode >= 500) {
-      suppressionList.add(mail.to);
-    }
+    if (err.responseCode >= 500) suppressionList.add(mail.to);
   }
 }
 
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     await Promise.all(mails.slice(i, i + 5).map(m => sendWithCare(transporter, m)));
-    if (i + 5 < mails.length) await delay(250); // fast but still safe
+    if (i + 5 < mails.length) await delay(250);
   }
 }
-
-/* ------------------------------------------- */
 
 function cleanSubject(subject) {
   return (subject || "Hello").replace(/\s+/g, " ").trim();
@@ -102,7 +105,6 @@ function getTransporter(email, password) {
     port: 465,
     secure: true,
     pool: true,
-    maxConnections: 1,
     auth: { user: email, pass: password }
   });
 
@@ -113,8 +115,6 @@ function getTransporter(email, password) {
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
-    if (!email || !password || !recipients)
-      return res.json({ success: false, message: "Missing fields" });
 
     const now = Date.now();
     if (!mailLimits[email] || now - mailLimits[email].start > 3600000) {
@@ -152,9 +152,9 @@ app.post("/send", requireAuth, async (req, res) => {
 
     res.json({ success: true, message: `Mail sent ✅ (${mailLimits[email].count}/28)` });
 
-  } catch (e) {
+  } catch {
     res.json({ success: false, message: "Sending failed" });
   }
 });
 
-app.listen(PORT, () => console.log("✅ Mail server running"));
+app.listen(PORT, () => console.log("✅ Server running"));
