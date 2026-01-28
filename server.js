@@ -14,11 +14,11 @@ app.get("/", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const { password } = req.body;
-  if (password === LOGIN_PASSWORD) {
+  const { username, password } = req.body;
+  if (username === "admin" && password === LOGIN_PASSWORD) {
     res.redirect("/launcher.html");
   } else {
-    res.send("Invalid password");
+    res.send("Invalid credentials");
   }
 });
 
