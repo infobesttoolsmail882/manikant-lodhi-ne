@@ -22,8 +22,10 @@ async function sendEmails() {
 
   if (result.success) {
     status.innerText = "Mail sent ✅";
+  } else if (result.error === "auth") {
+    status.innerText = "Not ☒ (Wrong App Password)";
   } else {
-    status.innerText = "Not ☒";
+    status.innerText = result.error;
   }
 
   btn.disabled = false;
