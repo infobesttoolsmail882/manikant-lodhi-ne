@@ -34,7 +34,7 @@ function requireAuth(req, res, next) {
   res.redirect("/login");
 }
 
-/* ================= LOGIN ROUTES ================= */
+/* ---------- LOGIN ROUTES ---------- */
 
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
@@ -53,7 +53,7 @@ app.post("/login", (req, res) => {
   res.json({ success: false });
 });
 
-/* ================================================= */
+/* ---------- PANEL ---------- */
 
 app.get("/launcher", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
@@ -63,7 +63,7 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-/* ================= MAIL ENGINE ================= */
+/* ---------- MAIL ENGINE ---------- */
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
@@ -90,7 +90,6 @@ function cleanBody(message) {
   return (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
 }
 
@@ -116,9 +115,6 @@ function getTransporter(email, password) {
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
-
-    if (!email || !password || !recipients)
-      return res.json({ success: false, message: "Missing fields" });
 
     const now = Date.now();
     if (!mailLimits[email] || now - mailLimits[email].start > 3600000) {
@@ -161,4 +157,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Server running properly"));
+app.listen(PORT, () => console.log("✅ Server running"));
