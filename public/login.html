@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Secure Access</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="page">
-    <div class="card">
-      <h2 class="title">🔒 Secure Access</h2>
-      <form action="/login" method="POST">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <div class="btn-row">
-          <button type="submit">Login</button>
-        </div>
-      </form>
-    </div>
+  <div class="container small">
+    <h2>Login</h2>
+    <input type="password" id="pass" placeholder="Enter Access Password">
+    <button onclick="login()">Login</button>
+    <p id="msg"></p>
   </div>
+
+  <script>
+    function login() {
+      if (document.getElementById("pass").value === "admin123") {
+        window.location = "launcher.html";
+      } else {
+        document.getElementById("msg").innerText = "Wrong password";
+      }
+    }
+  </script>
 </body>
 </html>
