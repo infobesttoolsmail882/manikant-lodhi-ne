@@ -9,11 +9,9 @@ const helmet = require("helmet");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-/* ===== BASIC LOGIN (CHANGE THESE) ===== */
 const USERNAME = "mailinbox@#";
 const PASSWORD = "mailinbox@#";
 
-/* ===== MIDDLEWARE ===== */
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -25,20 +23,14 @@ app.use(session({
   cookie: { maxAge: 60 * 60 * 1000 }
 }));
 
-/* ===== AUTH CHECK ===== */
 function requireAuth(req, res, next) {
   if (req.session.user) return next();
   res.redirect("/login");
 }
 
-/* ===== LOGIN ROUTES ===== */
-app.get("/", (req, res) =>
-  res.sendFile(path.join(__dirname, "public", "login.html"))
-);
-
-app.get("/login", (req, res) =>
-  res.sendFile(path.join(__dirname, "public", "login.html"))
-);
+/* LOGIN */
+app.get("/", (_, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/login", (_, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
@@ -53,19 +45,15 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
 
-/* ===== PANEL ===== */
-app.get("/panel", requireAuth, (req, res) =>
+/* PANEL */
+app.get("/panel", requireAuth, (_, res) =>
   res.sendFile(path.join(__dirname, "public", "panel.html"))
 );
 
-/* ===== SAFE EMAIL SENDING (INDIVIDUAL USE) ===== */
+/* EMAIL SEND (single safe send) */
 app.post("/send", requireAuth, async (req, res) => {
   try {
     const { email, password, to, subject, message } = req.body;
-
-    if (!email || !password || !to) {
-      return res.json({ success: false, message: "Missing fields" });
-    }
 
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
@@ -74,11 +62,7 @@ app.post("/send", requireAuth, async (req, res) => {
       auth: { user: email, pass: password }
     });
 
-    try {
-      await transporter.verify();
-    } catch {
-      return res.json({ success: false, message: "App Password Wrong ❌" });
-    }
+    await transporter.verify();
 
     await transporter.sendMail({
       from: email,
@@ -88,11 +72,9 @@ app.post("/send", requireAuth, async (req, res) => {
     });
 
     res.json({ success: true, message: "Mail sent ✅" });
-
-  } catch (err) {
-    res.json({ success: false, message: "Sending failed" });
+  } catch {
+    res.json({ success: false, message: "App Password Wrong ❌" });
   }
 });
 
-/* ===== START ===== */
-app.listen(PORT, () => console.log("✅ Server running safely"));
+app.listen(PORT, () => console.log("✅ Server running"));
