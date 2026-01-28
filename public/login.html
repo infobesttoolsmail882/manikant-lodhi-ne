@@ -22,7 +22,7 @@ function login(){
       password: password.value
     })
   }).then(r=>r.json()).then(d=>{
-    if(d.success) location.href='/launcher';
+    if(d.success) location.href='/panel';
     else alert("Wrong Login");
   });
 }
