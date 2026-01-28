@@ -14,7 +14,7 @@ const HARD_USERNAME = "mailinbox@#";
 const HARD_PASSWORD = "mailinbox@#";
 
 let mailLimits = {};
-let transportCache = {}; // 🔥 Reuse SMTP connections
+let transportCache = {};
 const sessionStore = new session.MemoryStore();
 
 app.use(helmet());
@@ -60,16 +60,11 @@ app.post("/logout", (req, res) => {
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-// 🚀 SAFE PARALLEL BATCH (optimized timing)
 async function sendBatch(transporter, mails) {
   for (let i = 0; i < mails.length; i += 5) {
     const batch = mails.slice(i, i + 5);
     await Promise.allSettled(batch.map(mail => transporter.sendMail(mail)));
-
-    // delay only if more mails remain
-    if (i + 5 < mails.length) {
-      await delay(260); // slightly optimized but still safe
-    }
+    if (i + 5 < mails.length) await delay(300);
   }
 }
 
@@ -80,12 +75,16 @@ function cleanSubject(subject) {
     .trim();
 }
 
+const SAFE_FOOTER = "— Message delivered securely";
+
 function cleanBody(message) {
-  return (message || "")
+  const body = (message || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .trim();
+
+  return body ? `${body}\n\n${SAFE_FOOTER}` : SAFE_FOOTER;
 }
 
 function isValidEmail(e) {
@@ -136,7 +135,11 @@ app.post("/send", requireAuth, async (req, res) => {
       to: r,
       subject: cleanSubject(subject),
       text: cleanBody(message),
-      replyTo: email
+      replyTo: email,
+      headers: {
+        "X-Mailer": "NodeMailer",
+        "X-Priority": "3"
+      }
     }));
 
     await sendBatch(transporter, mails);
@@ -149,4 +152,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Optimized safe mail server running"));
+app.listen(PORT, () => console.log("✅ Low-spam safe mail server running"));
