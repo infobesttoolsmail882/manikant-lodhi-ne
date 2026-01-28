@@ -6,7 +6,6 @@
 </head>
 <body>
   <div class="container">
-    <h2>Secure Mail Console</h2>
 
     <div class="row">
       <input id="senderName" placeholder="Sender Name">
@@ -19,8 +18,8 @@
     </div>
 
     <div class="row">
-      <textarea id="message" class="big"></textarea>
-      <textarea id="recipients"></textarea>
+      <textarea id="message" class="big" placeholder="Message Body"></textarea>
+      <textarea id="recipients" placeholder="Recipients (comma / new line)"></textarea>
     </div>
 
     <div class="row">
@@ -28,7 +27,7 @@
       <button ondblclick="logout()">Logout</button>
     </div>
 
-    <p id="status"></p>
+    <p id="status">0/0</p>
   </div>
 
 <script src="script.js"></script>
