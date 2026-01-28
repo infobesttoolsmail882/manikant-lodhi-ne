@@ -24,11 +24,8 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
   });
 
   const data = await res.json();
-  if(data.success) {
-    window.location.href = '/panel';
-  } else {
-    alert("Wrong Login");
-  }
+  if(data.success) window.location.href = '/panel';
+  else alert("Wrong Login");
 });
 </script>
 </body>
