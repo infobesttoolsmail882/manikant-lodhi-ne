@@ -1,20 +1,5 @@
-document.getElementById("sendBtn").onclick = async () => {
-  const res = await fetch("/send", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      email: email.value,
-      password: password.value,
-      to: to.value,
-      subject: subject.value,
-      message: message.value
-    })
-  });
-
-  const data = await res.json();
-  alert(data.message);
-};
-
-function logout(){
-  fetch("/logout",{method:"POST"}).then(()=>location.href="/login");
-}
+document.querySelector("form").addEventListener("submit", function () {
+  const recipients = document.querySelector("textarea[name='recipients']").value;
+  const count = recipients.split(/,|\n/).filter(r => r.trim()).length;
+  document.getElementById("counter").innerText = `0/${count}`;
+});
