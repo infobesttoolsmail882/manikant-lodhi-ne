@@ -7,11 +7,25 @@
 <body>
 <div class="login-box">
   <h2>Secure Access</h2>
-  <form method="POST" action="/login">
-    <input name="username" placeholder="Username" required>
-    <input name="password" type="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-  </form>
+  <input id="username" placeholder="Username">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
 </div>
+
+<script>
+function login(){
+  fetch('/login', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      username: username.value,
+      password: password.value
+    })
+  }).then(r=>r.json()).then(d=>{
+    if(d.success) location.href='/launcher';
+    else alert("Wrong Login");
+  });
+}
+</script>
 </body>
 </html>
