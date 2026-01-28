@@ -7,7 +7,7 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-const LOGIN_ID = "lodhi882@#";
+const LOGIN_PASSWORD = "lodhi882@#";
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
@@ -15,7 +15,7 @@ app.get("/", (req, res) => {
 
 app.post("/login", (req, res) => {
   const { password } = req.body;
-  if (password === LOGIN_ID) {
+  if (password === LOGIN_PASSWORD) {
     res.redirect("/launcher.html");
   } else {
     res.send("Invalid password");
