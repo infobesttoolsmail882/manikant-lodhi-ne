@@ -1,42 +1,28 @@
-let sending = false;
-
-const sendBtn = document.getElementById("sendBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const limitText = document.getElementById("limitText");
-
-sendBtn.addEventListener("click", () => {
-  if (!sending) sendMail();
-});
-
-logoutBtn.addEventListener("dblclick", () => {
-  if (!sending) location.href = "/login.html";
-});
-
 async function sendMail() {
-  sending = true;
-  sendBtn.disabled = true;
-  sendBtn.innerText = "Sending…";
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = true;
+  btn.innerText = "Sending...";
+
+  const data = {
+    sender: document.getElementById("sender").value,
+    gmail: document.getElementById("gmail").value,
+    appPassword: document.getElementById("apppass").value,
+    subject: document.getElementById("subject").value,
+    body: document.getElementById("body").value,
+    recipients: document.getElementById("recipients").value
+  };
 
   const res = await fetch("/send", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      senderName: senderName.value,
-      gmail: gmail.value,
-      apppass: apppass.value,
-      subject: subject.value,
-      message: message.value,
-      to: to.value
-    })
+    headers: { "Content-Type": "application/json" }, // 🔥 REQUIRED
+    body: JSON.stringify(data) // 🔥 REQUIRED
   });
 
-  const data = await res.json();
+  const result = await res.json();
 
-  sending = false;
-  sendBtn.disabled = false;
-  sendBtn.innerText = "Send All";
+  alert(result.msg);
+  document.getElementById("counter").innerText = result.count + "/28";
 
-  limitText.innerText = `${data.count}/28`;
-  if (!data.success) return alert(data.msg);
-  alert(`Mail Send Successful ✅\nSent: ${data.sent}`);
+  btn.disabled = false;
+  btn.innerText = "Send All";
 }
