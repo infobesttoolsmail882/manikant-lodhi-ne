@@ -2,7 +2,7 @@ document.getElementById("sendBtn").onclick = async () => {
   const res = await fetch("/send", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
+    body: JSON.stringify({
       email: email.value,
       password: password.value,
       to: to.value,
