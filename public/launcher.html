@@ -1,25 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mail Panel</title>
+  <title>Secure Mail Console</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="page">
-  <div class="card">
-    <h2>Send Email</h2>
-
-    <input id="email" placeholder="Your Gmail">
-    <input id="password" type="password" placeholder="App Password">
-    <input id="to" placeholder="Recipient Email">
-    <input id="subject" placeholder="Subject">
-    <textarea id="message" placeholder="Message"></textarea>
-
-    <button id="sendBtn">Send</button>
-    <button ondblclick="logout()">Logout</button>
-  </div>
-</div>
-
-<script src="script.js"></script>
+  <h2>Secure Mail Console</h2>
+  <form action="/send" method="POST">
+    <input type="text" name="senderName" placeholder="Sender Name" required><br>
+    <input type="email" name="gmail" placeholder="Your Gmail" required><br>
+    <input type="password" name="appPassword" placeholder="App Password" required><br>
+    <input type="text" name="subject" placeholder="Email Subject" required><br>
+    <textarea name="message" placeholder="Message Body" required></textarea><br>
+    <textarea name="recipients" placeholder="Recipients (comma / new line)" required></textarea><br>
+    <button type="submit">Send All</button>
+    <button type="button" onclick="location.href='login.html'">Logout</button>
+    <p id="counter">0/0</p>
+  </form>
+  <script src="script.js"></script>
 </body>
 </html>
