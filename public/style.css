@@ -1,74 +1,42 @@
-body {
-  font-family: Arial, sans-serif;
-  background-color: #e6f2ff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
+* { box-sizing: border-box; }
+body { margin:0; background:#eef3fb; font-family:Arial, sans-serif; }
+
+.login-box {
+  width:360px; margin:120px auto; background:#fff;
+  padding:30px; border-radius:16px; text-align:center;
+}
+.login-box input {
+  width:100%; padding:12px; margin-bottom:12px;
+  border-radius:10px; border:1px solid #ccc;
+}
+.login-box button {
+  width:100%; padding:14px; border-radius:12px;
+  border:none; background:#3b82f6; color:#fff; font-size:16px;
 }
 
-.page {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
+.page { display:flex; justify-content:center; padding-top:40px; }
 .card {
-  background: #fff;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 0 15px rgba(0,0,0,0.2);
-  width: 400px;
-  text-align: center;
+  width:980px; background:#fff; border-radius:18px;
+  padding:36px 40px; box-shadow:0 20px 40px rgba(0,0,0,.08);
 }
+.title { text-align:center; font-size:26px; margin-bottom:28px; }
 
-.title {
-  margin-bottom: 20px;
+.form-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:18px 24px;
 }
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
 input, textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
+  padding:14px 16px; font-size:15px;
+  border-radius:12px; border:1px solid #d6dbe3;
 }
-
-textarea {
-  height: 80px;
-  resize: vertical;
-}
+textarea { height:170px; resize:none; }
 
 .btn-row {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:22px; margin-top:32px;
 }
-
-button {
-  flex: 1;
-  margin: 5px;
-  padding: 10px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
+.btn-row button {
+  padding:16px; font-size:17px; border-radius:14px;
+  border:none; background:#3b82f6; color:#fff; cursor:pointer;
 }
-
-button:hover {
-  background-color: #0056b3;
-}
-
-.limit-text {
-  margin-top: 10px;
-  font-weight: bold;
-}
+.limit-text { margin-top:10px; font-size:14px; color:#374151; }
