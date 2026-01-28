@@ -34,9 +34,8 @@ function requireAuth(req, res, next) {
   res.redirect("/login");
 }
 
-/* ================= LOGIN FIX ================= */
+/* ================= LOGIN ROUTES ================= */
 
-// BOTH / and /login show login page
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
@@ -54,7 +53,7 @@ app.post("/login", (req, res) => {
   res.json({ success: false });
 });
 
-/* ============================================ */
+/* ================================================= */
 
 app.get("/launcher", requireAuth, (req, res) =>
   res.sendFile(path.join(__dirname, "public", "launcher.html"))
@@ -63,6 +62,8 @@ app.get("/launcher", requireAuth, (req, res) =>
 app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success: true }));
 });
+
+/* ================= MAIL ENGINE ================= */
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
@@ -116,6 +117,9 @@ app.post("/send", requireAuth, async (req, res) => {
   try {
     const { senderName, email, password, recipients, subject, message } = req.body;
 
+    if (!email || !password || !recipients)
+      return res.json({ success: false, message: "Missing fields" });
+
     const now = Date.now();
     if (!mailLimits[email] || now - mailLimits[email].start > 3600000) {
       mailLimits[email] = { count: 0, start: now };
@@ -157,4 +161,4 @@ app.post("/send", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log("✅ Server running"));
+app.listen(PORT, () => console.log("✅ Server running properly"));
