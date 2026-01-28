@@ -1,27 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mail Dispatch Panel</title>
+  <title>Mail Panel</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="page">
   <div class="card">
-    <h2 class="title">📨 Mail Dispatch Panel</h2>
+    <h2>Mail Dispatch Panel</h2>
 
-    <div class="form-grid">
-      <input id="senderName" placeholder="Sender Name">
-      <input id="email" placeholder="Gmail">
-      <input id="password" type="password" placeholder="App Password">
-      <input id="subject" placeholder="Subject">
-      <textarea id="message" placeholder="Message"></textarea>
-      <textarea id="recipients" placeholder="Recipients"></textarea>
-    </div>
+    <input id="senderName" placeholder="Sender Name">
+    <input id="email" placeholder="Gmail">
+    <input id="password" type="password" placeholder="App Password">
+    <input id="subject" placeholder="Subject">
+    <textarea id="message" placeholder="Message"></textarea>
+    <textarea id="recipients" placeholder="Recipients"></textarea>
 
-    <div class="btn-row">
-      <button id="sendBtn">Send</button>
-      <button id="logoutBtn">Logout</button>
-    </div>
+    <button id="sendBtn">Send</button>
+    <button ondblclick="logout()">Logout (double click)</button>
   </div>
 </div>
 
