@@ -7,8 +7,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const hourlyTracker = {};
-const HOURLY_LIMIT = 30; // safe cap
-const DELAY = 1200; // safe delay between mails
+const HOURLY_LIMIT = 30;
+const DELAY = 1200;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -17,14 +17,11 @@ function canSend(email, count) {
   if (!hourlyTracker[email]) {
     hourlyTracker[email] = { count: 0, reset: now + 3600000 };
   }
-
   const data = hourlyTracker[email];
-
   if (now > data.reset) {
     data.count = 0;
     data.reset = now + 3600000;
   }
-
   return (data.count + count) <= HOURLY_LIMIT;
 }
 
@@ -45,18 +42,21 @@ app.post("/send", async (req, res) => {
       auth: { user: gmail, pass: appPassword }
     });
 
+    let sent = 0;
+
     for (let to of list) {
       await transporter.sendMail({
         from: `"${senderName}" <${gmail}>`,
         to,
         subject,
-        text: message + "\n\n---\nSent via Secure Mail Console"
+        text: message
       });
+      sent++;
       await sleep(DELAY);
     }
 
-    hourlyTracker[gmail].count += list.length;
-    res.json({ success: true });
+    hourlyTracker[gmail].count += sent;
+    res.json({ success: true, sent, total: list.length });
 
   } catch (err) {
     res.json({ error: "auth" });
