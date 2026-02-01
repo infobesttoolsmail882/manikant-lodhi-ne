@@ -13,12 +13,19 @@
   </div>
 
 <script>
-function login() {
-  if (uid.value === "2026@#" && upass.value === "2026@#") {
-    location.href = "/launcher.html";
-  } else {
-    alert("Invalid Login ❌");
-  }
+async function login() {
+  const res = await fetch("/login", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      username: uid.value,
+      password: upass.value
+    })
+  });
+
+  const data = await res.json();
+  if (data.success) location.href = "/launcher.html";
+  else alert("Invalid Login ❌");
 }
 </script>
 </body>
