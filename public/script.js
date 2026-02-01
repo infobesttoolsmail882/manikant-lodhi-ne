@@ -25,7 +25,10 @@ async function sendMail() {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({
+      senderName: senderName.value,
+      replyTo: replyTo.value,
       subject: subject.value,
+      tag: tag.value,
       message: message.value,
       to: to.value
     })
@@ -36,6 +39,5 @@ async function sendMail() {
   sendBtn.disabled = false;
   sendBtn.innerText = "Send";
 
-  if (!data.success) return showPopup(data.msg || "Failed ❌");
-  showPopup(data.msg);
+  showPopup(data.msg || "Done");
 }
