@@ -1,82 +1,62 @@
 import express from "express";
-import session from "express-session";
-import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
-import path from "path";
-import { fileURLToPath } from "url";
+import cors from "cors";
+import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
 const app = express();
+app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
-app.use(session({
-  secret: "change-this-secret",
-  resave: false,
-  saveUninitialized: false
-}));
-
-/* ===== LOGIN USER ===== */
-const USERNAME = "admin";
-const HASHED_PASSWORD = await bcrypt.hash("2026@#", 10);
-
-function requireLogin(req,res,next){
-  if(!req.session.user) return res.status(401).json({success:false,msg:"Login required ❌"});
-  next();
-}
-
-app.get("/", (req,res)=>{
-  res.sendFile(path.join(__dirname,"public","login.html"));
+// ⛔ Abuse rokne ke liye basic rate limit
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20 // ek IP se 20 requests max
 });
+app.use(limiter);
 
-app.post("/login", async (req,res)=>{
-  const {username,password} = req.body;
-  if(username!==USERNAME) return res.json({success:false});
-  const ok = await bcrypt.compare(password,HASHED_PASSWORD);
-  if(!ok) return res.json({success:false});
-  req.session.user = username;
-  res.json({success:true});
-});
-
-app.post("/logout",(req,res)=>{
-  req.session.destroy(()=>res.json({success:true}));
-});
-
-/* ===== SECURE MAIL TRANSPORT (SERVER SIDE ONLY) ===== */
-/* Use environment variables — NOT user input */
+// ✅ Gmail SMTP Transport (App Password required)
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
-  secure: true,
+  service: "gmail",
   auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
+    user: process.env.EMAIL_USER,      // your gmail
+    pass: process.env.EMAIL_PASS       // gmail app password
   }
 });
 
-/* ===== SEND ROUTE ===== */
-app.post("/send", requireLogin, async (req,res)=>{
-  const { senderName, subject, message, to } = req.body;
+// Server health check
+app.get("/", (req, res) => {
+  res.send("Mail server running ✅");
+});
 
-  if(!subject || !message || !to)
-    return res.json({success:false,msg:"All fields required ❌"});
-
+// 📩 Send mail API
+app.post("/send-email", async (req, res) => {
   try {
-    await transporter.sendMail({
-      from: `"${senderName || "Mail System"}" <${process.env.MAIL_USER}>`,
+    const { to, subject, text } = req.body;
+
+    if (!to || !subject || !text) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const mailOptions = {
+      from: `"Mail Dispatch" <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      text: message
-    });
+      text
+    };
 
-    res.json({success:true,msg:"Mail Sent ✅"});
-  } catch(err){
-    console.log(err);
-    res.json({success:false,msg:"Mail send failed ❌"});
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Mail sent:", info.messageId);
+    res.json({ success: true, messageId: info.messageId });
+
+  } catch (error) {
+    console.error("Mail error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT,()=>console.log("Secure Mail Server running"));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT} 🚀`));
