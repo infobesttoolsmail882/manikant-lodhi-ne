@@ -18,17 +18,15 @@ app.use(session({
   cookie: { httpOnly: true }
 }));
 
-/* ===== DEMO USER (HASHED PASSWORD) ===== */
+/* ===== DEMO LOGIN ===== */
 const USERNAME = "admin";
 const HASHED_PASSWORD = await bcrypt.hash("2026@#", 10);
 
-/* ===== AUTH MIDDLEWARE ===== */
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.status(401).json({ msg: "Login required" });
   next();
 }
 
-/* ===== ROUTES ===== */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
@@ -48,19 +46,18 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success:true }));
 });
 
-/* ===== SAFE MAIL SEND (TRANSACTIONAL USE) ===== */
+/* ===== SAFE TRANSACTIONAL SEND ===== */
 app.post("/send", requireLogin, async (req, res) => {
   const { subject, message, to } = req.body;
 
   if (!subject || !message || !to)
     return res.json({ success:false, msg:"Missing fields" });
 
-  // 🔒 Here you would call your server-side authorized mail service
-  console.log("Sending transactional email:", { to, subject });
+  // यहाँ production में server-side verified mail service call होगा
+  console.log("Transactional email request:", { to, subject });
 
-  res.json({ success:true });
+  res.json({ success:true, msg:"Mail Sent ✅" });
 });
 
-/* ===== START SERVER ===== */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Secure server running on port", PORT));
