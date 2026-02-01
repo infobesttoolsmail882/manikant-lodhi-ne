@@ -6,29 +6,18 @@ logoutBtn.addEventListener("dblclick", async () => {
   location.href = "/login.html";
 });
 
-sendBtn.addEventListener("click", sendMail);
-
-function showPopup(msg) {
-  document.getElementById("popupText").innerText = msg;
-  document.getElementById("popup").classList.remove("hidden");
-}
-
-function closePopup() {
-  document.getElementById("popup").classList.add("hidden");
-}
-
-async function sendMail() {
+sendBtn.addEventListener("click", async () => {
   sendBtn.disabled = true;
   sendBtn.innerText = "Sending…";
 
   const res = await fetch("/send", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       senderName: senderName.value,
-      replyTo: replyTo.value,
+      gmail: gmail.value,
+      apppass: apppass.value,
       subject: subject.value,
-      tag: tag.value,
       message: message.value,
       to: to.value
     })
@@ -40,4 +29,13 @@ async function sendMail() {
   sendBtn.innerText = "Send";
 
   showPopup(data.msg || "Done");
+});
+
+function showPopup(msg) {
+  popupText.innerText = msg;
+  popup.classList.remove("hidden");
+}
+
+function closePopup() {
+  popup.classList.add("hidden");
 }
