@@ -1,6 +1,6 @@
 {
-  "name": "secure-mail-app",
-  "version": "2.0.0",
+  "name": "simple-secure-mail",
+  "version": "1.0.0",
   "type": "module",
   "dependencies": {
     "bcrypt": "^5.1.0",
