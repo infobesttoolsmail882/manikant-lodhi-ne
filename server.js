@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: "50kb" }));
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(session({
@@ -18,7 +18,6 @@ app.use(session({
   cookie: { httpOnly: true }
 }));
 
-/* ===== DEMO LOGIN ===== */
 const USERNAME = "admin";
 const HASHED_PASSWORD = await bcrypt.hash("2026@#", 10);
 
@@ -46,18 +45,18 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => res.json({ success:true }));
 });
 
-/* ===== SAFE TRANSACTIONAL SEND ===== */
+/* SIMPLE SAFE SEND (single message style) */
 app.post("/send", requireLogin, async (req, res) => {
   const { subject, message, to } = req.body;
 
   if (!subject || !message || !to)
-    return res.json({ success:false, msg:"Missing fields" });
+    return res.json({ success:false, msg:"All fields required ❌" });
 
-  // यहाँ production में server-side verified mail service call होगा
-  console.log("Transactional email request:", { to, subject });
+  // Yaha pe server-side verified mail service call hota hai
+  console.log("Mail request:", { to, subject });
 
   res.json({ success:true, msg:"Mail Sent ✅" });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Secure server running on port", PORT));
+app.listen(PORT, () => console.log("Server running on port", PORT));
