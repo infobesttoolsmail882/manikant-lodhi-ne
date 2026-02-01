@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-/* SAME SPEED SETTINGS (unchanged) */
+/* Same speed settings */
 const HOURLY_LIMIT = 28;
 const PARALLEL = 3;
 const DELAY_MS = 120;
@@ -22,26 +22,17 @@ const DELAY_MS = 120;
 let stats = {};
 setInterval(() => { stats = {}; }, 60 * 60 * 1000);
 
-/* Basic input cleaning (NOT spam tricks, just safety) */
+/* Basic cleanup (formatting only, not filter evasion) */
 const cleanText = t => (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
 const cleanSubject = s => (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
 
-/* Parallel sender */
 async function sendSafely(transporter, mails) {
   let sent = 0;
 
   for (let i = 0; i < mails.length; i += PARALLEL) {
     const batch = mails.slice(i, i + PARALLEL);
-
-    const results = await Promise.allSettled(
-      batch.map(m => transporter.sendMail(m))
-    );
-
-    results.forEach(r => {
-      if (r.status === "fulfilled") sent++;
-      else console.log("Send fail:", r.reason?.message);
-    });
-
+    const results = await Promise.allSettled(batch.map(m => transporter.sendMail(m)));
+    results.forEach(r => { if (r.status === "fulfilled") sent++; });
     await new Promise(r => setTimeout(r, DELAY_MS));
   }
 
@@ -51,37 +42,25 @@ async function sendSafely(transporter, mails) {
 app.post("/send", async (req, res) => {
   const { senderName, gmail, apppass, to, subject, message } = req.body;
 
-  if (!gmail || !apppass || !to || !subject || !message) {
+  if (!gmail || !apppass || !to || !subject || !message)
     return res.json({ success: false, msg: "Missing fields ❌" });
-  }
 
-  /* Basic email format check */
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gmail)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gmail))
     return res.json({ success: false, msg: "Invalid Gmail ❌" });
-  }
 
   if (!stats[gmail]) stats[gmail] = { count: 0 };
-
-  if (stats[gmail].count >= HOURLY_LIMIT) {
+  if (stats[gmail].count >= HOURLY_LIMIT)
     return res.json({ success: false, msg: "Hourly limit reached ❌" });
-  }
 
-  const recipients = to
-    .split(/,|\n/)
-    .map(r => r.trim())
+  const recipients = to.split(/,|\n/).map(r => r.trim())
     .filter(r => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r));
 
   const remaining = HOURLY_LIMIT - stats[gmail].count;
-
-  if (recipients.length === 0) {
+  if (recipients.length === 0)
     return res.json({ success: false, msg: "No valid recipients ❌" });
-  }
-
-  if (recipients.length > remaining) {
+  if (recipients.length > remaining)
     return res.json({ success: false, msg: "Limit full for this Gmail ❌" });
-  }
 
-  /* Gmail SMTP (standard, trusted config) */
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: gmail, pass: apppass }
@@ -89,8 +68,7 @@ app.post("/send", async (req, res) => {
 
   try {
     await transporter.verify();
-  } catch (err) {
-    console.log("SMTP ERROR:", err.message);
+  } catch {
     return res.json({ success: false, msg: "Gmail login failed ❌" });
   }
 
@@ -100,13 +78,12 @@ app.post("/send", async (req, res) => {
     subject: cleanSubject(subject),
     text: cleanText(message),
     replyTo: gmail
-    // No fake headers, no spoofing — keeps reputation safer
   }));
 
   const sent = await sendSafely(transporter, mails);
   stats[gmail].count += sent;
 
-  return res.json({ success: true, sent });
+  res.json({ success: true, sent });
 });
 
 app.listen(process.env.PORT || 3000, () => {
