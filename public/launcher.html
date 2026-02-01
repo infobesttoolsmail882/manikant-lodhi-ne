@@ -10,14 +10,10 @@
     <h2 class="title">📨 Mail Dispatch Panel</h2>
 
     <div class="form-grid">
-      <input id="senderName" placeholder="Sender Name">
-      <input id="replyTo" placeholder="Reply-To Email">
-
       <input id="subject" placeholder="Subject">
       <input id="tag" placeholder="Message Tag (optional)">
-
       <textarea id="message" placeholder="Message"></textarea>
-      <textarea id="to" placeholder="Recipients"></textarea>
+      <textarea id="to" placeholder="Recipient Email"></textarea>
     </div>
 
     <div class="btn-row">
@@ -26,6 +22,14 @@
     </div>
   </div>
 </div>
+
+<div id="popup" class="popup hidden">
+  <div class="popup-box">
+    <p id="popupText"></p>
+    <button onclick="closePopup()">OK</button>
+  </div>
+</div>
+
 <script src="script.js"></script>
 </body>
 </html>
