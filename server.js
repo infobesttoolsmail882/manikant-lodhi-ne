@@ -22,9 +22,11 @@ const DELAY_MS = 120;
 let stats = {};
 setInterval(() => { stats = {}; }, 60 * 60 * 1000);
 
-/* Clean formatting (NOT spam evasion) */
+/* Clean formatting (NOT spam tricks) */
 const cleanText = t => (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
 const cleanSubject = s => (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* Controlled parallel sending */
 async function sendSafely(transporter, mails) {
@@ -54,8 +56,6 @@ app.post("/send", async (req, res) => {
   if (!gmail || !apppass || !to || !subject || !message)
     return res.json({ success: false, msg: "Missing fields ❌" });
 
-  /* Basic email validation */
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(gmail))
     return res.json({ success: false, msg: "Invalid Gmail ❌" });
 
@@ -63,15 +63,19 @@ app.post("/send", async (req, res) => {
   if (stats[gmail].count >= HOURLY_LIMIT)
     return res.json({ success: false, msg: "Hourly limit reached ❌" });
 
-  const recipients = to.split(/,|\n/).map(r => r.trim()).filter(r => emailRegex.test(r));
+  const recipients = to
+    .split(/,|\n/)
+    .map(r => r.trim())
+    .filter(r => emailRegex.test(r));
+
   const remaining = HOURLY_LIMIT - stats[gmail].count;
 
   if (recipients.length === 0)
     return res.json({ success: false, msg: "No valid recipients ❌" });
+
   if (recipients.length > remaining)
     return res.json({ success: false, msg: "Limit full for this Gmail ❌" });
 
-  /* Standard Gmail SMTP */
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: gmail, pass: apppass }
@@ -84,6 +88,7 @@ app.post("/send", async (req, res) => {
     return res.json({ success: false, msg: "Gmail login failed ❌" });
   }
 
+  /* One message per recipient (better trust than mass TO) */
   const mails = recipients.map(r => ({
     from: `"${senderName || gmail}" <${gmail}>`,
     to: r,
