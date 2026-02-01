@@ -22,15 +22,9 @@ const DELAY_MS = 120;
 let stats = {};
 setInterval(() => { stats = {}; }, 60 * 60 * 1000);
 
-/* Clean Subject */
-const safeSubject = s =>
-  (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
+const safeSubject = s => (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
+const safeBody = t => (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
 
-/* Clean Body */
-const safeBody = t =>
-  (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
-
-/* Controlled parallel sending */
 async function sendSafely(transporter, mails) {
   let sent = 0;
   for (let i = 0; i < mails.length; i += PARALLEL) {
@@ -69,8 +63,7 @@ app.post("/send", async (req, res) => {
     from: `"${senderName || gmail}" <${gmail}>`,
     to: r,
     subject: safeSubject(subject),
-    text: safeBody(message),
-    headers: { "X-Mailer": "NodeMailer" } // normal header, not spammy
+    text: safeBody(message)
   }));
 
   const sent = await sendSafely(transporter, mails);
