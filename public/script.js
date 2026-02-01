@@ -1,11 +1,21 @@
 const sendBtn = document.getElementById("sendBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 
-sendBtn.addEventListener("click", sendMail);
-logoutBtn.addEventListener("click", async () => {
-  await fetch("/logout", { method:"POST" });
+logoutBtn.addEventListener("dblclick", async () => {
+  await fetch("/logout", { method: "POST" });
   location.href = "/login.html";
 });
+
+sendBtn.addEventListener("click", sendMail);
+
+function showPopup(msg) {
+  document.getElementById("popupText").innerText = msg;
+  document.getElementById("popup").classList.remove("hidden");
+}
+
+function closePopup() {
+  document.getElementById("popup").classList.add("hidden");
+}
 
 async function sendMail() {
   sendBtn.disabled = true;
@@ -22,9 +32,10 @@ async function sendMail() {
   });
 
   const data = await res.json();
+
   sendBtn.disabled = false;
   sendBtn.innerText = "Send";
 
-  if (!data.success) return alert(data.msg || "Failed ❌");
-  alert("Mail sent (transactional use) ✅");
+  if (!data.success) return showPopup(data.msg || "Failed ❌");
+  showPopup(data.msg);
 }
