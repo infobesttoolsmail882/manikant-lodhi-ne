@@ -1,18 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mail Console</title>
+  <title>Mail Dispatch Panel</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="page">
   <div class="card">
-    <h2 class="title">📧 Mail Console</h2>
+    <h2 class="title">📨 Mail Dispatch Panel</h2>
 
     <div class="form-grid">
-      <input id="subject" placeholder="Email Subject">
-      <textarea id="message" placeholder="Message Body"></textarea>
-      <textarea id="to" placeholder="Recipient Email"></textarea>
+      <input id="senderName" placeholder="Sender Name">
+      <input id="replyTo" placeholder="Reply-To Email">
+
+      <input id="subject" placeholder="Subject">
+      <input id="tag" placeholder="Message Tag (optional)">
+
+      <textarea id="message" placeholder="Message"></textarea>
+      <textarea id="to" placeholder="Recipients"></textarea>
     </div>
 
     <div class="btn-row">
