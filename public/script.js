@@ -2,10 +2,16 @@ if (!sessionStorage.getItem("auth")) location.href = "/login.html";
 
 let sending = false;
 
+const sendBtn = document.getElementById("sendBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+
 sendBtn.onclick = () => { if (!sending) sendMail(); };
+
 logoutBtn.ondblclick = () => {
-  sessionStorage.clear();
-  location.href = "/login.html";
+  if (!sending) {
+    sessionStorage.clear();
+    location.href = "/login.html";
+  }
 };
 
 async function sendMail() {
@@ -29,14 +35,19 @@ async function sendMail() {
 
     const data = await res.json();
 
-    if (!data.success) return alert(data.msg);
+    if (!data.success) {
+      alert(data.msg || "Sending failed ❌");
+      return;
+    }
+
     alert(`Send_1 ✅\nEmails Sent: ${data.sent}`);
 
-  } catch {
+  } catch (err) {
     alert("Server error ❌");
+  } finally {
+    // 🔥 ALWAYS reset button — success OR error
+    sending = false;
+    sendBtn.disabled = false;
+    sendBtn.innerText = "Send All";
   }
-
-  sending = false;
-  sendBtn.disabled = false;
-  sendBtn.innerText = "Send All";
 }
