@@ -1,10 +1,11 @@
 {
-  "name": "safe-mail-console",
+  "name": "safe-mail-dispatch",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "bcrypt": "^5.1.0",
     "express": "^4.19.2",
-    "express-session": "^1.17.3"
+    "express-session": "^1.17.3",
+    "bcrypt": "^5.1.0",
+    "nodemailer": "^6.9.9"
   }
 }
