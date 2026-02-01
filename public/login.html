@@ -17,12 +17,8 @@ async function login() {
   const res = await fetch("/login", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      username: uid.value,
-      password: upass.value
-    })
+    body: JSON.stringify({ username: uid.value, password: upass.value })
   });
-
   const data = await res.json();
   if (data.success) location.href = "/launcher.html";
   else alert("Invalid Login ❌");
