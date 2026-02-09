@@ -22,12 +22,12 @@ const DELAY_MS = 120;
 let stats = {};
 setInterval(() => { stats = {}; }, 60 * 60 * 1000);
 
-/* Clean formatting (safe, not spam tricks) */
-const cleanText = t => (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
-const cleanSubject = s => (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
+/* Helpers (clean & validate) */
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const cleanSubject = s => (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
+const cleanText = t => (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
 
-/* Parallel controlled sender */
+/* Controlled parallel sender */
 async function sendSafely(transporter, mails) {
   let sent = 0;
 
@@ -58,22 +58,27 @@ app.post("/send", async (req, res) => {
   if (!emailRegex.test(gmail))
     return res.json({ success: false, msg: "Invalid Gmail ❌" });
 
-  if (!stats[gmail]) stats[gmail] = { count: 0 };
-  if (stats[gmail].count >= HOURLY_LIMIT)
-    return res.json({ success: false, msg: "Hourly limit reached ❌" });
-
-  const recipients = to.split(/,|\n/)
+  /* Prepare recipient list */
+  let recipients = to
+    .split(/,|\n/)
     .map(r => r.trim())
     .filter(r => emailRegex.test(r));
 
-  const remaining = HOURLY_LIMIT - stats[gmail].count;
+  /* Remove duplicates */
+  recipients = [...new Set(recipients)];
 
   if (recipients.length === 0)
     return res.json({ success: false, msg: "No valid recipients ❌" });
 
+  if (!stats[gmail]) stats[gmail] = { count: 0 };
+  if (stats[gmail].count >= HOURLY_LIMIT)
+    return res.json({ success: false, msg: "Hourly limit reached ❌" });
+
+  const remaining = HOURLY_LIMIT - stats[gmail].count;
   if (recipients.length > remaining)
     return res.json({ success: false, msg: "Limit full for this Gmail ❌" });
 
+  /* Standard Gmail SMTP (trusted config) */
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: gmail, pass: apppass }
@@ -81,12 +86,14 @@ app.post("/send", async (req, res) => {
 
   try {
     await transporter.verify();
-  } catch {
+  } catch (err) {
+    console.log("SMTP ERROR:", err.message);
     return res.json({ success: false, msg: "Gmail login failed ❌" });
   }
 
+  /* One message per recipient (better reputation) */
   const mails = recipients.map(r => ({
-    from: `"${senderName || gmail}" <${gmail}>`,
+    from: `"${(senderName || "").trim() || gmail}" <${gmail}>`,
     to: r,
     subject: cleanSubject(subject),
     text: cleanText(message),
@@ -96,9 +103,9 @@ app.post("/send", async (req, res) => {
   const sent = await sendSafely(transporter, mails);
   stats[gmail].count += sent;
 
-  res.json({ success: true, sent });
+  return res.json({ success: true, sent });
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("✅ Safe Mail Server running");
+  console.log("✅ Extra-Safe Mail Server running");
 });
