@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-/* SAME SPEED (UNCHANGED) */
+/* SAME SPEED */
 const HOURLY_LIMIT = 28;
 const PARALLEL = 3;
 const DELAY_MS = 120;
@@ -22,12 +22,11 @@ const DELAY_MS = 120;
 let stats = {};
 setInterval(() => { stats = {}; }, 60 * 60 * 1000);
 
-/* Helpers: validate & clean (no spam tricks) */
+/* Helpers: validation + simple cleanup (no word-hiding) */
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const cleanSubject = s => (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
 const cleanText = t => (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
 
-/* Controlled parallel sender */
 async function sendSafely(transporter, mails) {
   let sent = 0;
 
@@ -52,13 +51,11 @@ async function sendSafely(transporter, mails) {
 app.post("/send", async (req, res) => {
   const { senderName, gmail, apppass, to, subject, message } = req.body;
 
-  if (!gmail || !apppass || !to || !subject || !message) {
+  if (!gmail || !apppass || !to || !subject || !message)
     return res.json({ success: false, msg: "Missing fields ❌" });
-  }
 
-  if (!emailRegex.test(gmail)) {
+  if (!emailRegex.test(gmail))
     return res.json({ success: false, msg: "Invalid Gmail ❌" });
-  }
 
   /* Prepare recipients */
   let recipients = to
@@ -69,21 +66,17 @@ app.post("/send", async (req, res) => {
   /* Remove duplicates */
   recipients = [...new Set(recipients)];
 
-  if (recipients.length === 0) {
+  if (recipients.length === 0)
     return res.json({ success: false, msg: "No valid recipients ❌" });
-  }
 
   if (!stats[gmail]) stats[gmail] = { count: 0 };
-  if (stats[gmail].count >= HOURLY_LIMIT) {
+  if (stats[gmail].count >= HOURLY_LIMIT)
     return res.json({ success: false, msg: "Hourly limit reached ❌" });
-  }
 
   const remaining = HOURLY_LIMIT - stats[gmail].count;
-  if (recipients.length > remaining) {
+  if (recipients.length > remaining)
     return res.json({ success: false, msg: "Limit full for this Gmail ❌" });
-  }
 
-  /* Standard Gmail SMTP (trusted) */
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: gmail, pass: apppass }
@@ -96,7 +89,6 @@ app.post("/send", async (req, res) => {
     return res.json({ success: false, msg: "Gmail login failed ❌" });
   }
 
-  /* One message per recipient */
   const mails = recipients.map(r => ({
     from: `"${(senderName || "").trim() || gmail}" <${gmail}>`,
     to: r,
@@ -108,7 +100,7 @@ app.post("/send", async (req, res) => {
   const sent = await sendSafely(transporter, mails);
   stats[gmail].count += sent;
 
-  return res.json({ success: true, sent });
+  res.json({ success: true, sent });
 });
 
 app.listen(process.env.PORT || 3000, () => {
