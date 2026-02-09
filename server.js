@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-/* SAME SPEED SETTINGS */
+/* SAME SPEED (UNCHANGED) */
 const HOURLY_LIMIT = 28;
 const PARALLEL = 3;
 const DELAY_MS = 120;
@@ -22,13 +22,12 @@ const DELAY_MS = 120;
 let stats = {};
 setInterval(() => { stats = {}; }, 60 * 60 * 1000);
 
-/* Clean formatting (NOT spam tricks) */
+/* Clean formatting (safe, not spam tricks) */
 const cleanText = t => (t || "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
 const cleanSubject = s => (s || "").replace(/\s+/g, " ").trim().slice(0, 150);
-
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* Controlled parallel sending */
+/* Parallel controlled sender */
 async function sendSafely(transporter, mails) {
   let sent = 0;
 
@@ -63,8 +62,7 @@ app.post("/send", async (req, res) => {
   if (stats[gmail].count >= HOURLY_LIMIT)
     return res.json({ success: false, msg: "Hourly limit reached ❌" });
 
-  const recipients = to
-    .split(/,|\n/)
+  const recipients = to.split(/,|\n/)
     .map(r => r.trim())
     .filter(r => emailRegex.test(r));
 
@@ -83,12 +81,10 @@ app.post("/send", async (req, res) => {
 
   try {
     await transporter.verify();
-  } catch (err) {
-    console.log("SMTP ERROR:", err.message);
+  } catch {
     return res.json({ success: false, msg: "Gmail login failed ❌" });
   }
 
-  /* One message per recipient (better trust than mass TO) */
   const mails = recipients.map(r => ({
     from: `"${senderName || gmail}" <${gmail}>`,
     to: r,
