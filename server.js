@@ -16,11 +16,11 @@ app.get("/", (req, res) => {
 
 /* ================= SAFE CONFIG ================= */
 
-const LIMIT_4H = 28;                          // 28 emails per 4 hours
-const RESET_TIME = 4 * 60 * 60 * 1000;        // 4 hours
-const PARALLEL = 3;                           // controlled fast
-const BASE_DELAY = 120;                       // natural delay
-const MAX_FAIL = 3;                           // stop on repeated errors
+const LIMIT_4H = 28;                     // 28 emails
+const RESET_TIME = 4 * 60 * 60 * 1000;   // 4 hours
+const DELAY_MIN = 120;
+const DELAY_MAX = 180;
+const MAX_FAIL = 2;                      // stop early to protect account
 
 let sentCount = {};
 let failCount = {};
@@ -29,7 +29,7 @@ let failCount = {};
 setInterval(() => {
   sentCount = {};
   failCount = {};
-  console.log("4-hour counter reset");
+  console.log("4-hour reset completed");
 }, RESET_TIME);
 
 /* ================= HELPERS ================= */
@@ -37,34 +37,32 @@ setInterval(() => {
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function delay() {
-  return new Promise(r =>
-    setTimeout(r, BASE_DELAY + Math.floor(Math.random() * 40))
-  );
+  const time = Math.floor(
+    Math.random() * (DELAY_MAX - DELAY_MIN + 1)
+  ) + DELAY_MIN;
+
+  return new Promise(r => setTimeout(r, time));
 }
 
-async function sendBatch(transporter, mails, gmail) {
+async function sendSafely(transporter, mails, gmail) {
   let sent = 0;
 
-  for (let i = 0; i < mails.length; i += PARALLEL) {
-    const batch = mails.slice(i, i + PARALLEL);
+  for (const mail of mails) {
+    try {
+      await transporter.sendMail(mail);
 
-    const results = await Promise.allSettled(
-      batch.map(m => transporter.sendMail(m))
-    );
+      sent++;
+      sentCount[gmail] = (sentCount[gmail] || 0) + 1;
+      failCount[gmail] = 0;
 
-    for (const r of results) {
-      if (r.status === "fulfilled") {
-        sent++;
-        sentCount[gmail] = (sentCount[gmail] || 0) + 1;
-        failCount[gmail] = 0;
-      } else {
-        failCount[gmail] = (failCount[gmail] || 0) + 1;
-      }
+    } catch (err) {
+      failCount[gmail] = (failCount[gmail] || 0) + 1;
+
+      // Early stop to protect sender reputation
+      if (failCount[gmail] >= MAX_FAIL) break;
     }
 
     await delay();
-
-    if (failCount[gmail] >= MAX_FAIL) break;
   }
 
   return sent;
@@ -76,10 +74,10 @@ app.post("/send", async (req, res) => {
   const { senderName, gmail, apppass, to, subject, message } = req.body;
 
   if (!gmail || !apppass || !to || !subject || !message)
-    return res.json({ success:false, msg:"Missing fields" });
+    return res.json({ success:false, msg:"Missing required fields" });
 
   if (!emailRegex.test(gmail))
-    return res.json({ success:false, msg:"Invalid Gmail" });
+    return res.json({ success:false, msg:"Invalid Gmail address" });
 
   sentCount[gmail] = sentCount[gmail] || 0;
 
@@ -111,7 +109,7 @@ app.post("/send", async (req, res) => {
 
   try { await transporter.verify(); }
   catch {
-    return res.json({ success:false, msg:"Authentication failed" });
+    return res.json({ success:false, msg:"Gmail authentication failed" });
   }
 
   const mails = recipients.map(r => ({
@@ -122,7 +120,7 @@ app.post("/send", async (req, res) => {
     replyTo:gmail
   }));
 
-  const sent = await sendBatch(transporter, mails, gmail);
+  const sent = await sendSafely(transporter, mails, gmail);
 
   res.json({
     success:true,
@@ -132,10 +130,10 @@ app.post("/send", async (req, res) => {
   });
 });
 
-/* ================= START ================= */
+/* ================= START SERVER ================= */
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Safe Mail Server running on port", PORT);
+  console.log("Real Safe Mail Server running on port", PORT);
 });
