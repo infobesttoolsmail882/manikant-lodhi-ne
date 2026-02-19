@@ -1,18 +1,24 @@
-require('dotenv').config();
-const express = require('express');
-const session = require('express-session');
-const bodyParser = require('body-parser');
-const nodemailer = require('nodemailer');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const bcrypt = require('bcrypt');
-const validator = require('validator');
-const path = require('path');
+import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+import nodemailer from 'nodemailer';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import bcrypt from 'bcrypt';
+import validator from 'validator';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ================= SECURITY MIDDLEWARE =================
+// ================= SECURITY =================
 
 app.use(helmet());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -24,25 +30,31 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false,
+    secure: true,
+    sameSite: "lax",
     maxAge: 60 * 60 * 1000
   }
 }));
 
-// Login brute force protection
+// ================= RATE LIMIT =================
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { success: false, message: "Too many login attempts" }
+  max: 5
+});
+
+const sendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 25
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ================= AUTH =================
 
-async function requireAuth(req, res, next) {
-  if (req.session.user) return next();
-  return res.redirect('/');
+function requireAuth(req, res, next) {
+  if (!req.session.user) return res.redirect('/');
+  next();
 }
 
 // ================= LOGIN =================
@@ -51,43 +63,18 @@ app.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   if (username !== process.env.ADMIN_USER)
-    return res.json({ success: false, message: "Invalid credentials" });
+    return res.json({ success: false });
 
   const match = await bcrypt.compare(password, process.env.ADMIN_PASS_HASH);
 
   if (!match)
-    return res.json({ success: false, message: "Invalid credentials" });
+    return res.json({ success: false });
 
   req.session.user = username;
-  return res.json({ success: true });
+  res.json({ success: true });
 });
 
-// ================= SEND RATE LIMIT =================
-
-const sendLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 25,
-  message: { success: false, message: "Hourly send limit reached" }
-});
-
-// ================= HELPERS =================
-
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function sendBatch(transporter, mails) {
-  for (const mail of mails) {
-    try {
-      await transporter.sendMail(mail);
-      await delay(800); // safe delay
-    } catch (err) {
-      console.error("Mail failed:", err.message);
-    }
-  }
-}
-
-// ================= SEND MAIL =================
+// ================= SEND =================
 
 app.post('/send', requireAuth, sendLimiter, async (req, res) => {
   try {
@@ -112,27 +99,26 @@ app.post('/send', requireAuth, sendLimiter, async (req, res) => {
       auth: { user: email, pass: appPassword }
     });
 
-    const mails = recipientList.map(r => ({
-      from: `"${senderName || 'Mailer'}" <${email}>`,
-      to: r,
-      subject: subject || "Notification",
-      text: message || ""
-    }));
+    for (const r of recipientList) {
+      await transporter.sendMail({
+        from: `"${senderName || "Mailer"}" <${email}>`,
+        to: r,
+        subject: subject || "Notification",
+        text: message || ""
+      });
 
-    await sendBatch(transporter, mails);
+      await new Promise(res => setTimeout(res, 800));
+    }
 
-    return res.json({
-      success: true,
-      message: `Sent ${recipientList.length} mails safely`
-    });
+    res.json({ success: true, message: "Emails sent safely" });
 
   } catch (err) {
-    return res.json({ success: false, message: "Error sending emails" });
+    res.json({ success: false, message: "Send failed" });
   }
 });
 
 // ================= START =================
 
 app.listen(PORT, () => {
-  console.log(`🚀 Safe Mail Launcher running on port ${PORT}`);
+  console.log(`🚀 Safe Mail Launcher running on ${PORT}`);
 });
