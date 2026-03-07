@@ -42,9 +42,10 @@ async function sendMail() {
 
     alert(`Send_1 ✅\nEmails Sent: ${data.sent}`);
 
-  } catch {
+  } catch (err) {
     alert("Server error ❌");
   } finally {
+    // 🔥 ALWAYS reset button — success OR error
     sending = false;
     sendBtn.disabled = false;
     sendBtn.innerText = "Send All";
