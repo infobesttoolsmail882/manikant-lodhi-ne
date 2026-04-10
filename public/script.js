@@ -1,53 +1,61 @@
-if (!sessionStorage.getItem("auth")) location.href = "/login.html";
+document.addEventListener("DOMContentLoaded", () => {
 
-let sending = false;
-
-const sendBtn = document.getElementById("sendBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-
-sendBtn.onclick = () => { if (!sending) sendMail(); };
-
-logoutBtn.ondblclick = () => {
-  if (!sending) {
-    sessionStorage.clear();
+  if (!sessionStorage.getItem("auth")) {
     location.href = "/login.html";
+    return;
   }
-};
 
-async function sendMail() {
-  sending = true;
-  sendBtn.disabled = true;
-  sendBtn.innerText = "Sending…";
+  let sending = false;
 
-  try {
-    const res = await fetch("/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        senderName: senderName.value.trim(),
-        gmail: gmail.value.trim(),
-        apppass: apppass.value.trim(),
-        subject: subject.value.trim(),
-        message: message.value.trim(),
-        to: to.value.trim()
-      })
-    });
+  const sendBtn = document.getElementById("sendBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
 
-    const data = await res.json();
+  sendBtn.addEventListener("click", () => {
+    if (!sending) sendMail();
+  });
 
-    if (!data.success) {
-      alert(data.msg || "Sending failed ❌");
-      return;
+  logoutBtn.addEventListener("dblclick", () => {
+    if (!sending) {
+      sessionStorage.clear();
+      location.href = "/login.html";
     }
+  });
 
-    alert(`Send_1 ✅\nEmails Sent: ${data.sent}`);
+  async function sendMail() {
+    sending = true;
+    sendBtn.disabled = true;
+    sendBtn.innerText = "Sending...";
 
-  } catch (err) {
-    alert("Server error ❌");
-  } finally {
-    // 🔥 ALWAYS reset button — success OR error
-    sending = false;
-    sendBtn.disabled = false;
-    sendBtn.innerText = "Send All";
+    try {
+      const res = await fetch("/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderName: document.getElementById("senderName").value.trim(),
+          gmail: document.getElementById("gmail").value.trim(),
+          apppass: document.getElementById("apppass").value.trim(),
+          subject: document.getElementById("subject").value.trim(),
+          message: document.getElementById("message").value.trim(),
+          to: document.getElementById("to").value.trim()
+        })
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.msg || "Sending failed ❌");
+        return;
+      }
+
+      alert(`Send_1 ✅\nEmails Sent: ${data.sent}`);
+
+    } catch {
+      alert("Server error ❌");
+    } finally {
+      sending = false;
+      sendBtn.disabled = false;
+      sendBtn.innerText = "Send All";
+    }
   }
-}
+
+});
